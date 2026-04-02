@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sarf Typing Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=DM+Mono:wght@400;500&family=Spectral:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0e0b;--surface:#1a1914;--surface2:#232218;
+  --border:rgba(255,245,200,.10);--border2:rgba(255,245,200,.18);
+  --gold:#d4a946;--gold-dim:#8a6d28;--gold-bright:#f0c95a;
+  --cream:#f5edd6;--cream-dim:#a89878;
+  --red:#c0392b;--green:#2e7d4f;--green-bright:#3aad6a;
+  --blue:#2471a3;--blue-bright:#5dade2;
+  --text:#ede4cc;--text-dim:#8a7f68;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Spectral',Georgia,serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;}
+.noise{position:fixed;inset:0;pointer-events:none;z-index:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");opacity:.4;}
+.page{position:relative;z-index:1;width:100%;max-width:760px;padding:3rem 2rem 5rem;display:flex;flex-direction:column;align-items:center;gap:2.5rem;}
+header{text-align:center;border-bottom:1px solid var(--border);padding-bottom:2rem;width:100%;}
+.header-arabic{font-family:'Amiri',serif;font-size:2.2rem;color:var(--gold);line-height:1.3;margin-bottom:.3rem;direction:rtl;}
+header h1{font-size:1.05rem;font-weight:300;letter-spacing:.18em;text-transform:uppercase;color:var(--cream-dim);}
+header p{font-size:.9rem;color:var(--text-dim);margin-top:.5rem;font-style:italic;font-weight:300;}
+/* Controls */
+.controls{width:100%;display:flex;flex-direction:column;gap:.75rem;}
+.control-row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:flex-end;}
+.control-group{display:flex;flex-direction:column;gap:.35rem;flex:1;min-width:120px;}
+label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-dim);font-family:'DM Mono',monospace;}
+select{background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:.5rem .6rem;border-radius:6px;font-family:'Spectral',serif;font-size:.88rem;cursor:pointer;outline:none;transition:border-color .2s;width:100%;}
+select:focus{border-color:var(--gold);}
+.btn-generate{background:var(--gold);color:#0f0e0b;border:none;padding:.55rem 1.4rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:.82rem;letter-spacing:.08em;font-weight:500;cursor:pointer;transition:background .2s,transform .1s;white-space:nowrap;align-self:flex-end;}
+.btn-generate:hover{background:var(--gold-bright);}.btn-generate:active{transform:scale(.97);}
+/* Card */
+.card{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:2.5rem 2rem;display:flex;flex-direction:column;align-items:center;gap:1.8rem;}
+.card.hidden{display:none;}
+/* Jiggle */
+@keyframes jiggle{0%{transform:translateX(0);}15%{transform:translateX(-8px);}30%{transform:translateX(8px);}45%{transform:translateX(-6px);}60%{transform:translateX(6px);}75%{transform:translateX(-3px);}90%{transform:translateX(3px);}100%{transform:translateX(0);}}
+.jiggle{animation:jiggle .45s ease;}
+.error-msg{width:100%;background:rgba(192,57,43,.12);border:1px solid rgba(192,57,43,.35);border-radius:10px;padding:1rem 1.4rem;font-family:'DM Mono',monospace;font-size:.82rem;color:#e74c3c;letter-spacing:.04em;text-align:center;display:none;animation:fadein .2s ease;}
+.error-msg.show{display:block;}
+/* Prompt grid */
+.prompt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;width:100%;background:var(--border);border-radius:10px;overflow:hidden;}
+.prompt-cell{background:var(--surface2);padding:1rem 1.3rem;display:flex;flex-direction:column;gap:.3rem;}
+.prompt-cell:nth-child(1){border-radius:10px 0 0 0;}.prompt-cell:nth-child(2){border-radius:0 10px 0 0;}
+.prompt-cell:nth-child(3){border-radius:0 0 0 10px;}.prompt-cell:nth-child(4){border-radius:0 0 10px 0;}
+.cell-label{font-size:.66rem;font-family:'DM Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-dim);}
+.cell-value{font-size:1rem;color:var(--cream);font-weight:400;}
+.cell-value.arabic{font-family:'Amiri',serif;font-size:1.6rem;direction:rtl;line-height:1.4;color:var(--gold-bright);}
+.prompt-instruction{font-size:1rem;color:var(--text-dim);font-style:italic;font-weight:300;text-align:center;}
+/* Single input */
+.input-area{width:100%;display:flex;flex-direction:column;align-items:center;gap:1rem;}
+.arabic-input{width:100%;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--gold-bright);font-family:'Amiri',serif;font-size:2.4rem;text-align:center;direction:rtl;padding:1rem;outline:none;transition:border-color .2s;caret-color:var(--gold);}
+.arabic-input:focus{border-color:var(--gold);}
+.arabic-input.correct{border-color:var(--green);color:var(--green-bright);}
+.arabic-input.incorrect{border-color:var(--red);}
+/* I'rab triple input */
+.iraab-wrap{width:100%;display:none;flex-direction:column;gap:.85rem;}
+.iraab-wrap.active{display:flex;}
+.iraab-row{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;width:100%;}
+.iraab-group{display:flex;flex-direction:column;gap:.4rem;}
+.iraab-label{font-family:'Amiri',serif;font-size:1.05rem;direction:rtl;text-align:center;color:var(--gold-dim);}
+.iraab-label small{display:block;font-family:'DM Mono',monospace;font-size:.62rem;color:var(--text-dim);direction:ltr;letter-spacing:.06em;}
+.iraab-input{width:100%;background:var(--bg);border:1.5px solid var(--border2);border-radius:8px;color:var(--gold-bright);font-family:'Amiri',serif;font-size:1.7rem;text-align:center;direction:rtl;padding:.6rem .4rem;outline:none;transition:border-color .2s;caret-color:var(--gold);}
+.iraab-input:focus{border-color:var(--gold);}
+.iraab-input.correct{border-color:var(--green);color:var(--green-bright);}
+.iraab-input.incorrect{border-color:var(--red);}
+.iraab-result{width:100%;display:none;flex-direction:column;gap:.5rem;border-radius:10px;padding:1rem 1.3rem;animation:fadein .25s ease;}
+.iraab-result.show{display:flex;}
+.iraab-result.all-correct{background:rgba(46,125,79,.12);border:1px solid rgba(58,173,106,.3);}
+.iraab-result.has-error{background:rgba(192,57,43,.10);border:1px solid rgba(192,57,43,.3);}
+.iraab-results-row{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;}
+.iraab-res-cell{text-align:center;}
+.iraab-res-label{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem;}
+.iraab-res-label.ok{color:var(--green-bright);}.iraab-res-label.err{color:#e74c3c;}
+.iraab-res-form{font-family:'Amiri',serif;font-size:1.5rem;direction:rtl;color:var(--cream);}
+/* Buttons */
+.input-hint{font-size:.75rem;color:var(--text-dim);font-family:'DM Mono',monospace;text-align:center;}
+.btn-row{display:flex;gap:.75rem;}
+.btn-check{background:var(--surface2);border:1px solid var(--gold-dim);color:var(--gold);padding:.6rem 1.6rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:.85rem;letter-spacing:.06em;cursor:pointer;transition:all .2s;}
+.btn-check:hover{background:var(--gold);color:#0f0e0b;}.btn-check:disabled{opacity:.4;cursor:not-allowed;}
+.btn-skip{background:transparent;border:1px solid var(--border2);color:var(--text-dim);padding:.6rem 1.2rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:.85rem;cursor:pointer;transition:all .2s;}
+.btn-skip:hover{border-color:var(--cream-dim);color:var(--cream);}
+/* Standard feedback */
+.feedback{width:100%;border-radius:10px;padding:1.2rem 1.5rem;display:none;flex-direction:column;gap:.6rem;animation:fadein .25s ease;}
+.feedback.show{display:flex;}
+.feedback.correct-fb{background:rgba(46,125,79,.12);border:1px solid rgba(58,173,106,.3);}
+.feedback.incorrect-fb{background:rgba(192,57,43,.10);border:1px solid rgba(192,57,43,.3);}
+.feedback-title{font-family:'DM Mono',monospace;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;}
+.correct-fb .feedback-title{color:var(--green-bright);}.incorrect-fb .feedback-title{color:#e74c3c;}
+.feedback-answer{font-family:'Amiri',serif;font-size:2rem;direction:rtl;color:var(--cream);line-height:1.4;}
+.feedback-note{font-size:.85rem;color:var(--text-dim);font-style:italic;}
+/* Vocab reveal */
+.vocab-reveal{margin-top:.4rem;padding:.8rem 1rem;background:rgba(212,169,70,.07);border:1px solid rgba(212,169,70,.2);border-radius:8px;display:flex;flex-direction:column;gap:.25rem;}
+.vocab-arabic{font-family:'Amiri',serif;font-size:1.7rem;direction:rtl;color:var(--gold-bright);line-height:1.3;}
+.vocab-meaning{font-size:.92rem;color:var(--cream-dim);font-style:italic;}
+.vocab-root{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--text-dim);letter-spacing:.06em;}
+/* Timer row */
+.timer-row{width:100%;display:flex;justify-content:space-between;align-items:center;}
+.stats{display:flex;gap:1.5rem;font-family:'DM Mono',monospace;color:var(--text-dim);}
+.stat{display:flex;flex-direction:column;align-items:center;gap:.2rem;}
+.stat-num{font-size:1.4rem;color:var(--gold);font-weight:500;}
+.stat-label{letter-spacing:.08em;text-transform:uppercase;font-size:.65rem;}
+.timer-controls{display:flex;align-items:center;gap:.5rem;}
+.timer-display{font-family:'DM Mono',monospace;font-size:.9rem;color:var(--text-dim);min-width:48px;text-align:right;}
+.timer-display.running{color:var(--gold);}.timer-display.expired{color:var(--red);animation:pulse 1s infinite;}
+.btn-icon{background:transparent;border:1px solid var(--border2);color:var(--text-dim);width:28px;height:28px;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .2s;padding:0;font-family:inherit;}
+.btn-icon:hover{border-color:var(--gold-dim);color:var(--gold);}
+.timer-settings-wrap{position:relative;}
+.settings-dropdown{display:none;position:absolute;right:0;top:34px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;overflow:hidden;z-index:100;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,.5);}
+.settings-dropdown.open{display:block;}
+.settings-opt{padding:.55rem 1rem;font-family:'DM Mono',monospace;font-size:.78rem;color:var(--text-dim);cursor:pointer;transition:background .15s;letter-spacing:.05em;white-space:nowrap;}
+.settings-opt:hover{background:var(--surface);color:var(--gold);}.settings-opt.active{color:var(--gold-bright);}
+/* Welcome */
+.welcome{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:3rem 2rem;text-align:center;display:flex;flex-direction:column;gap:1.2rem;align-items:center;}
+.welcome h2{font-family:'Amiri',serif;font-size:1.8rem;color:var(--gold);direction:rtl;}
+.welcome p{max-width:480px;font-size:.95rem;color:var(--text-dim);line-height:1.8;font-style:italic;font-weight:300;}
+.welcome .tip{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--gold-dim);letter-spacing:.06em;}
+.kbd-hint{margin-top:.5rem;font-family:'DM Mono',monospace;font-size:.72rem;color:var(--text-dim);}
+.kbd{display:inline-block;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;font-size:.7rem;color:var(--cream-dim);}
+.streak-flash{font-family:'DM Mono',monospace;font-size:.78rem;letter-spacing:.08em;min-height:1.2em;text-align:center;}
+@keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+@media(max-width:520px){.page{padding:2rem 1rem 4rem;}.card{padding:1.8rem 1rem;}.iraab-row{grid-template-columns:1fr;}.iraab-results-row{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<div class="page">
+<header>
+  <div class="header-arabic">الصَّرْف</div>
+  <h1>Sarf Typing Practice</h1>
+  <p>Given the root, form, and conjugation — write the word</p>
+</header>
+
+<div class="controls" id="controls-wrap">
+  <div class="control-row">
+    <div class="control-group">
+      <label>Form / Bāb</label>
+      <select id="sel-form">
+        <option value="all">All Forms</option>
+        <option value="I">I — فَعَلَ</option>
+        <option value="II">II — فَعَّلَ</option>
+        <option value="III">III — فَاعَلَ</option>
+        <option value="IV">IV — أَفْعَلَ</option>
+        <option value="V">V — تَفَعَّلَ</option>
+        <option value="VI">VI — تَفَاعَلَ</option>
+        <option value="VII">VII — اِنْفَعَلَ</option>
+        <option value="VIII">VIII — اِفْتَعَلَ</option>
+        <option value="IX">IX — اِفْعَلَّ</option>
+        <option value="X">X — اِسْتَفْعَلَ</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Conjugation</label>
+      <select id="sel-conj">
+        <option value="all">All</option>
+        <option value="past">Past (ماضي)</option>
+        <option value="present">Present + i'rāb (مضارع)</option>
+        <option value="imperative">Imperative (أمر)</option>
+        <option value="masdar">Verbal noun (مصدر)</option>
+        <option value="activepart">Active participle (اسم فاعل)</option>
+        <option value="passivepart">Passive participle (اسم مفعول)</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Irregularity</label>
+      <select id="sel-irreg">
+        <option value="all">All</option>
+        <option value="hollow">Hollow — أجوف</option>
+        <option value="defective">Defective — ناقص</option>
+        <option value="assimilated">Assimilated — مثال</option>
+        <option value="hamzated">Hamzated — مهموز</option>
+        <option value="mudaaf">Geminate — مضاعف</option>
+        <option value="lafif_maqroon">Lafīf Maqrūn — لفيف مقرون</option>
+        <option value="lafif_mafrooq">Lafīf Mafrūq — لفيف مفروق</option>
+      </select>
+    </div>
+    <button class="btn-generate" id="btn-gen">Generate ↺</button>
+  </div>
+</div>
+
+<div class="error-msg" id="error-msg"></div>
+
+<div class="welcome" id="welcome">
+  <h2>مَرْحَبًا</h2>
+  <p>Select a form, conjugation type, and irregularity, then press <strong>Generate</strong>. For present tense, you will be asked to provide all three i'rāb states: مرفوع، منصوب، مجزوم.</p>
+  <p class="tip">After a correct answer the full meaning is shown — learn vocabulary while practising morphology.</p>
+</div>
+
+<div class="card hidden" id="card">
+  <div class="timer-row">
+    <div class="stats">
+      <div class="stat"><span class="stat-num" id="stat-correct">0</span><span class="stat-label">Correct</span></div>
+      <div class="stat"><span class="stat-num" id="stat-total">0</span><span class="stat-label">Total</span></div>
+      <div class="stat"><span class="stat-num" id="stat-streak">0</span><span class="stat-label">Streak</span></div>
+    </div>
+    <div class="timer-controls">
+      <span class="timer-display" id="timer">00:00</span>
+      <button class="btn-icon" id="btn-reset-timer" title="Reset">↺</button>
+      <div class="timer-settings-wrap">
+        <button class="btn-icon" id="btn-timer-settings" title="Timer settings">⚙</button>
+        <div class="settings-dropdown" id="settings-dropdown">
+          <div class="settings-opt active" data-mode="stopwatch">Stopwatch</div>
+          <div class="settings-opt" data-mode="60">1 min timer</div>
+          <div class="settings-opt" data-mode="300">5 min timer</div>
+          <div class="settings-opt" data-mode="600">10 min timer</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="prompt-grid">
+    <div class="prompt-cell"><span class="cell-label">Root</span><span class="cell-value arabic" id="cell-root">—</span></div>
+    <div class="prompt-cell"><span class="cell-label">Form</span><span class="cell-value" id="cell-form">—</span></div>
+    <div class="prompt-cell"><span class="cell-label">Conjugation</span><span class="cell-value" id="cell-conj">—</span></div>
+    <div class="prompt-cell"><span class="cell-label">Meaning</span><span class="cell-value" id="cell-meaning">—</span></div>
+  </div>
+
+  <p class="prompt-instruction" id="prompt-instruction">Type the conjugated Arabic word below</p>
+
+  <!-- Standard single input (non-present tense) -->
+  <div class="input-area" id="single-input-area">
+    <input class="arabic-input" id="arabic-input" type="text" dir="rtl"
+      placeholder="اكتب هنا..." autocomplete="off" autocorrect="off" spellcheck="false"/>
+    <div class="input-hint">Arabic keyboard required · Include full harakāt where possible</div>
+    <div class="btn-row">
+      <button class="btn-check" id="btn-check">Check ✓</button>
+      <button class="btn-skip" id="btn-skip">Skip →</button>
+    </div>
+    <div class="kbd-hint"><span class="kbd">Enter</span> to check &nbsp;·&nbsp; <span class="kbd">Shift+Enter</span> to skip</div>
+  </div>
+
+  <!-- I'rab triple input (present tense) -->
+  <div class="iraab-wrap" id="iraab-wrap">
+    <div class="iraab-row">
+      <div class="iraab-group">
+        <div class="iraab-label">مَرْفُوع<small>marfūʿ (indicative)</small></div>
+        <input class="iraab-input" id="inp-rafa" type="text" dir="rtl" placeholder="يَفْعَلُ" autocomplete="off" autocorrect="off" spellcheck="false"/>
+      </div>
+      <div class="iraab-group">
+        <div class="iraab-label">مَنْصُوب<small>manṣūb (subjunctive)</small></div>
+        <input class="iraab-input" id="inp-nasb" type="text" dir="rtl" placeholder="يَفْعَلَ" autocomplete="off" autocorrect="off" spellcheck="false"/>
+      </div>
+      <div class="iraab-group">
+        <div class="iraab-label">مَجْزُوم<small>majzūm (jussive)</small></div>
+        <input class="iraab-input" id="inp-jazm" type="text" dir="rtl" placeholder="يَفْعَلْ" autocomplete="off" autocorrect="off" spellcheck="false"/>
+      </div>
+    </div>
+    <div class="btn-row" style="justify-content:center">
+      <button class="btn-check" id="btn-check-iraab">Check ✓</button>
+      <button class="btn-skip" id="btn-skip-iraab">Skip →</button>
+    </div>
+    <div class="kbd-hint"><span class="kbd">Enter</span> in any box to check &nbsp;·&nbsp; <span class="kbd">Shift+Enter</span> to skip</div>
+    <div class="iraab-result" id="iraab-result">
+      <div class="iraab-results-row" id="iraab-results-row"></div>
+      <div class="feedback-note" id="iraab-note"></div>
+    </div>
+  </div>
+
+  <!-- Standard feedback (non-present) -->
+  <div class="feedback" id="feedback">
+    <div class="feedback-title" id="fb-title"></div>
+    <div class="feedback-answer" id="fb-answer"></div>
+    <div class="feedback-note" id="fb-note"></div>
+    <div class="vocab-reveal" id="vocab-reveal" style="display:none">
+      <div class="vocab-arabic" id="vocab-arabic"></div>
+      <div class="vocab-meaning" id="vocab-meaning"></div>
+      <div class="vocab-root" id="vocab-root"></div>
+    </div>
+  </div>
+
+  <!-- Vocab reveal for i'rab mode -->
+  <div class="vocab-reveal" id="iraab-vocab" style="display:none;width:100%;">
+    <div class="vocab-arabic" id="iraab-vocab-arabic"></div>
+    <div class="vocab-meaning" id="iraab-vocab-meaning"></div>
+    <div class="vocab-root" id="iraab-vocab-root"></div>
+  </div>
+
+  <div class="streak-flash" id="streak-flash"></div>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// IRREGULARITY TYPES:
+//   sound         سالم
+//   hollow        أجوف     (2nd radical weak: و/ي)
+//   defective     ناقص     (3rd radical weak: و/ي)
+//   assimilated   مثال     (1st radical weak: و/ي)
+//   hamzated      مهموز    (a radical is hamza)
+//   mudaaf        مضاعف    (2nd=3rd radical)
+//   lafif_maqroon لفيف مقرون (2nd+3rd both weak, consecutive)
+//   lafif_mafrooq لفيف مفروق (1st+3rd both weak, separated)
+//
+// ROOT FIELDS:
+//   r   = transliterated root (display)
+//   t   = irregularity type
+//   m   = English meaning (used for vocab reveal)
+//   jPres = explicit مجزوم هو override for present tense (hollow/mudaaf)
+//   forms.present.he = مرفوع form of هو (others derived algorithmically)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── I'RAB DERIVATION ────────────────────────────────────────────────────────
+// Derives {r, n, j} (marfoo, mansoob, majzoom) for هو from the stored form.
+// For other persons the pattern is applied in getIraabForPerson().
+const D = '\u064F'; // ُ damma
+const F = '\u064E'; // َ fatha
+const SK= '\u0652'; // ْ sukun
+const KS= '\u0650'; // ِ kasra
+const WW= '\u0648'; // و
+const YY= '\u064A'; // ي
+const AM= '\u0649'; // ى alif maqsura
+
+function deriveIraab(marfoo, jPres) {
+  const r = marfoo;
+  const last = r[r.length-1];
+  const prev = r[r.length-2];
+
+  // Defective: ُو  (يَدْعُو → يَدْعُوَ → يَدْعُ)
+  if (last === WW && prev === D)
+    return {r, n: r+F, j: r.slice(0,-1)};
+
+  // Defective: ِي  (يَرْمِي → يَرْمِيَ → يَرْمِ)
+  if (last === YY && (prev === KS || prev === D))
+    return {r, n: r+F, j: r.slice(0,-1)};
+
+  // Defective: ى  (يَنْسَى → يَنْسَى → يَنْسَ)
+  if (last === AM)
+    return {r, n: r, j: r.slice(0,-1)+F};
+
+  // Standard: ends in damma  (يَكْتُبُ → يَكْتُبَ → يَكْتُبْ)
+  if (last === D) {
+    const base = r.slice(0,-1);
+    if (jPres) return {r, n: base+F, j: jPres};
+    return {r, n: base+F, j: base+SK};
+  }
+
+  // Mudaaf shaddah+damma (يَمُدُّ → يَمُدَّ → jPres)
+  // \u0651 = shaddah; if r ends in damma+shaddah or shaddah+damma both handled
+  const penult = r[r.length-2]||'';
+  if (last === '\u0651' && prev === D || last === D && prev === '\u0651') {
+    const base = r.slice(0,-1);
+    if (jPres) return {r, n: base.slice(0,-1)+'\u0651'+F, j: jPres};
+  }
+
+  return {r, n:r, j: jPres||r};
+}
+
+// Derive i'rab for *any* person given their مرفوع form
+function derivePersonIraab(marfoo, jPres) {
+  const r = marfoo;
+  const last = r[r.length-1];
+  const prev = r.slice(-2);
+
+  // Indeclinable: feminine plural ending ـنَ or ـنْ
+  if (r.endsWith('\u0646\u064E') || r.endsWith('\u0646\u0652'))
+    return {r, n:r, j:r};
+
+  // Five-verb forms (أفعال الخمسة): masc dual ـانِ or masc pl ـونَ
+  // marfoo ends in انِ (alif+nun+kasra) → drop ن → ا
+  if (r.endsWith('\u0627\u0646\u0650') || r.endsWith('\u0627\u0646\u0650\u064A')) { // ـانِ
+    return {r, n: r.slice(0,-2)+'\u0627', j: r.slice(0,-2)+'\u0627'};
+  }
+  // ـانِ with alef+nun pattern (without kasra)
+  if (/[\u0627\u064A]\u0646$/.test(r)) {
+    return {r, n: r.slice(0,-2)+'\u0627', j: r.slice(0,-2)+'\u0627'};
+  }
+  // ـونَ (waw+nun+fatha)
+  if (r.endsWith('\u0648\u0646\u064E') || r.endsWith('\u0648\u0646\u064E\u0651')) {
+    return {r, n: r.slice(0,-2)+'\u0648\u0627', j: r.slice(0,-2)+'\u0648\u0627'};
+  }
+
+  // All other forms: use standard derivation
+  return deriveIraab(r, jPres);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════════════════
+const DATA = {
+
+// ─── FORM I ─────────────────────────────────────────────────────────────────
+I:{ label:'Form I', pattern:'فَعَلَ', roots:[
+
+  // ─ sound ──────────────────────────────────────────────────────────────
+  {r:'ك-ت-ب',t:'sound',m:'write',forms:{
+    past:{he:'كَتَبَ',she:'كَتَبَتْ',you:'كَتَبْتَ',I:'كَتَبْتُ',they:'كَتَبُوا'},
+    present:{he:'يَكْتُبُ',she:'تَكْتُبُ',you:'تَكْتُبُ',I:'أَكْتُبُ',they:'يَكْتُبُونَ'},
+    imperative:{you:'اُكْتُبْ',youpl:'اُكْتُبُوا'},
+    masdar:{_:'كِتَابَةٌ'},activepart:{_:'كَاتِبٌ'},passivepart:{_:'مَكْتُوبٌ'}}},
+  {r:'ذ-ه-ب',t:'sound',m:'go',forms:{
+    past:{he:'ذَهَبَ',she:'ذَهَبَتْ',you:'ذَهَبْتَ',I:'ذَهَبْتُ',they:'ذَهَبُوا'},
+    present:{he:'يَذْهَبُ',she:'تَذْهَبُ',you:'تَذْهَبُ',I:'أَذْهَبُ',they:'يَذْهَبُونَ'},
+    imperative:{you:'اِذْهَبْ',youpl:'اِذْهَبُوا'},
+    masdar:{_:'ذَهَابٌ'},activepart:{_:'ذَاهِبٌ'},passivepart:{_:'مَذْهُوبٌ'}}},
+  {r:'ع-ل-م',t:'sound',m:'know',forms:{
+    past:{he:'عَلِمَ',she:'عَلِمَتْ',you:'عَلِمْتَ',I:'عَلِمْتُ',they:'عَلِمُوا'},
+    present:{he:'يَعْلَمُ',she:'تَعْلَمُ',you:'تَعْلَمُ',I:'أَعْلَمُ',they:'يَعْلَمُونَ'},
+    imperative:{you:'اِعْلَمْ',youpl:'اِعْلَمُوا'},
+    masdar:{_:'عِلْمٌ'},activepart:{_:'عَالِمٌ'},passivepart:{_:'مَعْلُومٌ'}}},
+  {r:'ن-ص-ر',t:'sound',m:'help/aid',forms:{
+    past:{he:'نَصَرَ',she:'نَصَرَتْ',you:'نَصَرْتَ',I:'نَصَرْتُ',they:'نَصَرُوا'},
+    present:{he:'يَنْصُرُ',she:'تَنْصُرُ',you:'تَنْصُرُ',I:'أَنْصُرُ',they:'يَنْصُرُونَ'},
+    imperative:{you:'اُنْصُرْ',youpl:'اُنْصُرُوا'},
+    masdar:{_:'نَصْرٌ'},activepart:{_:'نَاصِرٌ'},passivepart:{_:'مَنْصُورٌ'}}},
+  {r:'ج-ع-ل',t:'sound',m:'make/put',forms:{
+    past:{he:'جَعَلَ',she:'جَعَلَتْ',you:'جَعَلْتَ',I:'جَعَلْتُ',they:'جَعَلُوا'},
+    present:{he:'يَجْعَلُ',she:'تَجْعَلُ',you:'تَجْعَلُ',I:'أَجْعَلُ',they:'يَجْعَلُونَ'},
+    imperative:{you:'اِجْعَلْ',youpl:'اِجْعَلُوا'},
+    masdar:{_:'جَعْلٌ'},activepart:{_:'جَاعِلٌ'},passivepart:{_:'مَجْعُولٌ'}}},
+  {r:'فَعَلَ',t:'sound',m:'do/act (paradigm)',forms:{
+    past:{he:'فَعَلَ',she:'فَعَلَتْ',you:'فَعَلْتَ',I:'فَعَلْتُ',they:'فَعَلُوا'},
+    present:{he:'يَفْعَلُ',she:'تَفْعَلُ',you:'تَفْعَلُ',I:'أَفْعَلُ',they:'يَفْعَلُونَ'},
+    imperative:{you:'اِفْعَلْ',youpl:'اِفْعَلُوا'},
+    masdar:{_:'فِعْلٌ'},activepart:{_:'فَاعِلٌ'},passivepart:{_:'مَفْعُولٌ'}}},
+
+  // ─ hollow (أجوف) ─────────────────────────────────────────────────────
+  {r:'ق-و-ل',t:'hollow',m:'say',jPres:'يَقُلْ',forms:{
+    past:{he:'قَالَ',she:'قَالَتْ',you:'قُلْتَ',I:'قُلْتُ',they:'قَالُوا'},
+    present:{he:'يَقُولُ',she:'تَقُولُ',you:'تَقُولُ',I:'أَقُولُ',they:'يَقُولُونَ'},
+    imperative:{you:'قُلْ',youpl:'قُولُوا'},
+    masdar:{_:'قَوْلٌ'},activepart:{_:'قَائِلٌ'},passivepart:{_:'مَقُولٌ'}}},
+  {r:'ك-و-ن',t:'hollow',m:'be/exist',jPres:'يَكُنْ',forms:{
+    past:{he:'كَانَ',she:'كَانَتْ',you:'كُنْتَ',I:'كُنْتُ',they:'كَانُوا'},
+    present:{he:'يَكُونُ',she:'تَكُونُ',you:'تَكُونُ',I:'أَكُونُ',they:'يَكُونُونَ'},
+    imperative:{you:'كُنْ',youpl:'كُونُوا'},
+    masdar:{_:'كَوْنٌ'},activepart:{_:'كَائِنٌ'},passivepart:{_:'مَكُونٌ'}}},
+  {r:'ب-ي-ع',t:'hollow',m:'sell',jPres:'يَبِعْ',forms:{
+    past:{he:'بَاعَ',she:'بَاعَتْ',you:'بِعْتَ',I:'بِعْتُ',they:'بَاعُوا'},
+    present:{he:'يَبِيعُ',she:'تَبِيعُ',you:'تَبِيعُ',I:'أَبِيعُ',they:'يَبِيعُونَ'},
+    imperative:{you:'بِعْ',youpl:'بِيعُوا'},
+    masdar:{_:'بَيْعٌ'},activepart:{_:'بَائِعٌ'},passivepart:{_:'مَبِيعٌ'}}},
+  {r:'خ-و-ف',t:'hollow',m:'fear',jPres:'يَخَفْ',forms:{
+    past:{he:'خَافَ',she:'خَافَتْ',you:'خِفْتَ',I:'خِفْتُ',they:'خَافُوا'},
+    present:{he:'يَخَافُ',she:'تَخَافُ',you:'تَخَافُ',I:'أَخَافُ',they:'يَخَافُونَ'},
+    imperative:{you:'خَفْ',youpl:'خَافُوا'},
+    masdar:{_:'خَوْفٌ'},activepart:{_:'خَائِفٌ'},passivepart:{_:'مَخُوفٌ'}}},
+  {r:'ز-و-ر',t:'hollow',m:'visit',jPres:'يَزُرْ',forms:{
+    past:{he:'زَارَ',she:'زَارَتْ',you:'زُرْتَ',I:'زُرْتُ',they:'زَارُوا'},
+    present:{he:'يَزُورُ',she:'تَزُورُ',you:'تَزُورُ',I:'أَزُورُ',they:'يَزُورُونَ'},
+    imperative:{you:'زُرْ',youpl:'زُورُوا'},
+    masdar:{_:'زِيَارَةٌ'},activepart:{_:'زَائِرٌ'},passivepart:{_:'مَزُورٌ'}}},
+  {r:'ع-و-د',t:'hollow',m:'return/come back',jPres:'يَعُدْ',forms:{
+    past:{he:'عَادَ',she:'عَادَتْ',you:'عُدْتَ',I:'عُدْتُ',they:'عَادُوا'},
+    present:{he:'يَعُودُ',she:'تَعُودُ',you:'تَعُودُ',I:'أَعُودُ',they:'يَعُودُونَ'},
+    imperative:{you:'عُدْ',youpl:'عُودُوا'},
+    masdar:{_:'عَوْدٌ'},activepart:{_:'عَائِدٌ'},passivepart:{_:'مَعُودٌ'}}},
+  {r:'ق-ي-م',t:'hollow',m:'stand up/rise',jPres:'يَقُمْ',forms:{
+    past:{he:'قَامَ',she:'قَامَتْ',you:'قُمْتَ',I:'قُمْتُ',they:'قَامُوا'},
+    present:{he:'يَقُومُ',she:'تَقُومُ',you:'تَقُومُ',I:'أَقُومُ',they:'يَقُومُونَ'},
+    imperative:{you:'قُمْ',youpl:'قُومُوا'},
+    masdar:{_:'قِيَامٌ'},activepart:{_:'قَائِمٌ'},passivepart:{_:'مَقُومٌ'}}},
+  {r:'ج-ي-أ',t:'hollow',m:'come',jPres:'يَجِئْ',forms:{
+    past:{he:'جَاءَ',she:'جَاءَتْ',you:'جِئْتَ',I:'جِئْتُ',they:'جَاءُوا'},
+    present:{he:'يَجِيءُ',she:'تَجِيءُ',you:'تَجِيءُ',I:'أَجِيءُ',they:'يَجِيئُونَ'},
+    imperative:{you:'جِئْ',youpl:'جِيئُوا'},
+    masdar:{_:'مَجِيءٌ'},activepart:{_:'جَائِيٌ'},passivepart:{_:'مَجِيءٌ'}}},
+  {r:'س-ي-ر',t:'hollow',m:'travel/walk',jPres:'يَسِرْ',forms:{
+    past:{he:'سَارَ',she:'سَارَتْ',you:'سِرْتَ',I:'سِرْتُ',they:'سَارُوا'},
+    present:{he:'يَسِيرُ',she:'تَسِيرُ',you:'تَسِيرُ',I:'أَسِيرُ',they:'يَسِيرُونَ'},
+    imperative:{you:'سِرْ',youpl:'سِيرُوا'},
+    masdar:{_:'سَيْرٌ'},activepart:{_:'سَائِرٌ'},passivepart:{_:'مَسِيرٌ'}}},
+
+  // ─ defective (ناقص) ──────────────────────────────────────────────────
+  {r:'د-ع-و',t:'defective',m:'call/invite',forms:{
+    past:{he:'دَعَا',she:'دَعَتْ',you:'دَعَوْتَ',I:'دَعَوْتُ',they:'دَعَوْا'},
+    present:{he:'يَدْعُو',she:'تَدْعُو',you:'تَدْعُو',I:'أَدْعُو',they:'يَدْعُونَ'},
+    imperative:{you:'اُدْعُ',youpl:'اُدْعُوا'},
+    masdar:{_:'دُعَاءٌ'},activepart:{_:'دَاعٍ'},passivepart:{_:'مَدْعُوٌّ'}}},
+  {r:'ر-م-ي',t:'defective',m:'throw',forms:{
+    past:{he:'رَمَى',she:'رَمَتْ',you:'رَمَيْتَ',I:'رَمَيْتُ',they:'رَمَوْا'},
+    present:{he:'يَرْمِي',she:'تَرْمِي',you:'تَرْمِي',I:'أَرْمِي',they:'يَرْمُونَ'},
+    imperative:{you:'اِرْمِ',youpl:'اِرْمُوا'},
+    masdar:{_:'رَمْيٌ'},activepart:{_:'رَامٍ'},passivepart:{_:'مَرْمِيٌّ'}}},
+  {r:'ن-س-ي',t:'defective',m:'forget',forms:{
+    past:{he:'نَسِيَ',she:'نَسِيَتْ',you:'نَسِيتَ',I:'نَسِيتُ',they:'نَسُوا'},
+    present:{he:'يَنْسَى',she:'تَنْسَى',you:'تَنْسَى',I:'أَنْسَى',they:'يَنْسَوْنَ'},
+    imperative:{you:'اِنْسَ',youpl:'اِنْسَوْا'},
+    masdar:{_:'نِسْيَانٌ'},activepart:{_:'نَاسٍ'},passivepart:{_:'مَنْسِيٌّ'}}},
+  {r:'م-ش-ي',t:'defective',m:'walk',forms:{
+    past:{he:'مَشَى',she:'مَشَتْ',you:'مَشَيْتَ',I:'مَشَيْتُ',they:'مَشَوْا'},
+    present:{he:'يَمْشِي',she:'تَمْشِي',you:'تَمْشِي',I:'أَمْشِي',they:'يَمْشُونَ'},
+    imperative:{you:'اِمْشِ',youpl:'اِمْشُوا'},
+    masdar:{_:'مَشْيٌ'},activepart:{_:'مَاشٍ'},passivepart:{_:'مَمْشِيٌّ'}}},
+  {r:'ب-ق-ي',t:'defective',m:'remain/stay',forms:{
+    past:{he:'بَقِيَ',she:'بَقِيَتْ',you:'بَقِيتَ',I:'بَقِيتُ',they:'بَقُوا'},
+    present:{he:'يَبْقَى',she:'تَبْقَى',you:'تَبْقَى',I:'أَبْقَى',they:'يَبْقَوْنَ'},
+    imperative:{you:'اِبْقَ',youpl:'اِبْقَوْا'},
+    masdar:{_:'بَقَاءٌ'},activepart:{_:'بَاقٍ'},passivepart:{_:'مَبْقِيٌّ'}}},
+  {r:'ن-و-ي',t:'defective',m:'intend',forms:{
+    past:{he:'نَوَى',she:'نَوَتْ',you:'نَوَيْتَ',I:'نَوَيْتُ',they:'نَوَوْا'},
+    present:{he:'يَنْوِي',she:'تَنْوِي',you:'تَنْوِي',I:'أَنْوِي',they:'يَنْوُونَ'},
+    imperative:{you:'اِنْوِ',youpl:'اِنْوُوا'},
+    masdar:{_:'نِيَّةٌ'},activepart:{_:'نَاوٍ'},passivepart:{_:'مَنْوِيٌّ'}}},
+  {r:'ت-ل-و',t:'defective',m:'recite/follow',forms:{
+    past:{he:'تَلَا',she:'تَلَتْ',you:'تَلَوْتَ',I:'تَلَوْتُ',they:'تَلَوْا'},
+    present:{he:'يَتْلُو',she:'تَتْلُو',you:'تَتْلُو',I:'أَتْلُو',they:'يَتْلُونَ'},
+    imperative:{you:'اُتْلُ',youpl:'اُتْلُوا'},
+    masdar:{_:'تِلَاوَةٌ'},activepart:{_:'تَالٍ'},passivepart:{_:'مَتْلُوٌّ'}}},
+
+  // ─ assimilated (مثال) – Fataha pattern (و drops in مضارع) ────────────
+  {r:'و-ق-ع',t:'assimilated',m:'occur/happen',forms:{
+    past:{he:'وَقَعَ',she:'وَقَعَتْ',you:'وَقَعْتَ',I:'وَقَعْتُ',they:'وَقَعُوا'},
+    present:{he:'يَقَعُ',she:'تَقَعُ',you:'تَقَعُ',I:'أَقَعُ',they:'يَقَعُونَ'},
+    imperative:{you:'قَعْ',youpl:'قَعُوا'},
+    masdar:{_:'وُقُوعٌ'},activepart:{_:'وَاقِعٌ'},passivepart:{_:'مَوْقُوعٌ'}}},
+  {r:'و-ج-د',t:'assimilated',m:'find',forms:{
+    past:{he:'وَجَدَ',she:'وَجَدَتْ',you:'وَجَدْتَ',I:'وَجَدْتُ',they:'وَجَدُوا'},
+    present:{he:'يَجِدُ',she:'تَجِدُ',you:'تَجِدُ',I:'أَجِدُ',they:'يَجِدُونَ'},
+    imperative:{you:'جِدْ',youpl:'جِدُوا'},
+    masdar:{_:'وُجُودٌ'},activepart:{_:'وَاجِدٌ'},passivepart:{_:'مَوْجُودٌ'}}},
+  {r:'و-ص-ل',t:'assimilated',m:'arrive/reach',forms:{
+    past:{he:'وَصَلَ',she:'وَصَلَتْ',you:'وَصَلْتَ',I:'وَصَلْتُ',they:'وَصَلُوا'},
+    present:{he:'يَصِلُ',she:'تَصِلُ',you:'تَصِلُ',I:'أَصِلُ',they:'يَصِلُونَ'},
+    imperative:{you:'صِلْ',youpl:'صِلُوا'},
+    masdar:{_:'وُصُولٌ'},activepart:{_:'وَاصِلٌ'},passivepart:{_:'مَوْصُولٌ'}}},
+  {r:'و-ض-ع',t:'assimilated',m:'place/put',forms:{
+    past:{he:'وَضَعَ',she:'وَضَعَتْ',you:'وَضَعْتَ',I:'وَضَعْتُ',they:'وَضَعُوا'},
+    present:{he:'يَضَعُ',she:'تَضَعُ',you:'تَضَعُ',I:'أَضَعُ',they:'يَضَعُونَ'},
+    imperative:{you:'ضَعْ',youpl:'ضَعُوا'},
+    masdar:{_:'وَضْعٌ'},activepart:{_:'وَاضِعٌ'},passivepart:{_:'مَوْضُوعٌ'}}},
+  {r:'و-ل-د',t:'assimilated',m:'give birth/be born',forms:{
+    past:{he:'وَلَدَ',she:'وَلَدَتْ',you:'وَلَدْتَ',I:'وَلَدْتُ',they:'وَلَدُوا'},
+    present:{he:'يَلِدُ',she:'تَلِدُ',you:'تَلِدُ',I:'أَلِدُ',they:'يَلِدُونَ'},
+    imperative:{you:'لِدْ',youpl:'لِدُوا'},
+    masdar:{_:'وِلَادَةٌ'},activepart:{_:'وَالِدٌ'},passivepart:{_:'مَوْلُودٌ'}}},
+  // Assimilated Hasiba pattern – و retained in مضارع
+  {r:'و-ر-ث',t:'assimilated',m:'inherit',forms:{
+    past:{he:'وَرِثَ',she:'وَرِثَتْ',you:'وَرِثْتَ',I:'وَرِثْتُ',they:'وَرِثُوا'},
+    present:{he:'يَرِثُ',she:'تَرِثُ',you:'تَرِثُ',I:'أَرِثُ',they:'يَرِثُونَ'},
+    imperative:{you:'رِثْ',youpl:'رِثُوا'},
+    masdar:{_:'وِرَاثَةٌ'},activepart:{_:'وَارِثٌ'},passivepart:{_:'مَوْرُوثٌ'}}},
+  // Assimilated 'Alima pattern – و RETAINED
+  {r:'و-ج-ع',t:'assimilated',m:'be in pain',forms:{
+    past:{he:'وَجِعَ',she:'وَجِعَتْ',you:'وَجِعْتَ',I:'وَجِعْتُ',they:'وَجِعُوا'},
+    present:{he:'يَوْجَعُ',she:'تَوْجَعُ',you:'تَوْجَعُ',I:'أَوْجَعُ',they:'يَوْجَعُونَ'},
+    imperative:{you:'اِيجَعْ',youpl:'اِيجَعُوا'},
+    masdar:{_:'وَجَعٌ'},activepart:{_:'وَاجِعٌ'},passivepart:{_:'مَوْجُوعٌ'}}},
+  // Assimilated Karuma pattern – و RETAINED
+  {r:'و-س-م',t:'assimilated',m:'be handsome/branded',forms:{
+    past:{he:'وَسُمَ',she:'وَسُمَتْ',you:'وَسُمْتَ',I:'وَسُمْتُ',they:'وَسُمُوا'},
+    present:{he:'يَوْسُمُ',she:'تَوْسُمُ',you:'تَوْسُمُ',I:'أَوْسُمُ',they:'يَوْسُمُونَ'},
+    imperative:{you:'اِوسُمْ',youpl:'اِوسُمُوا'},
+    masdar:{_:'وَسَامَةٌ'},activepart:{_:'وَاسِمٌ'},passivepart:{_:'مَوْسُومٌ'}}},
+  // Mithāl Yā'ī – Form I Fataḥa
+  {r:'ي-ف-ع',t:'assimilated',m:'reach puberty/be an adolescent',forms:{
+    past:{he:'يَفَعَ',she:'يَفَعَتْ',you:'يَفَعْتَ',I:'يَفَعْتُ',they:'يَفَعُوا'},
+    present:{he:'يَيْفَعُ',she:'تَيْفَعُ',you:'تَيْفَعُ',I:'أَيْفَعُ',they:'يَيْفَعُونَ'},
+    imperative:{you:'اِيفَعْ',youpl:'اِيفَعُوا'},
+    masdar:{_:'يَفَاعَةٌ'},activepart:{_:'يَافِعٌ'},passivepart:{_:'مَيْفُوعٌ'}}},
+  // Mithāl Yā'ī – Ḍaraba pattern
+  {r:'ي-ت-م',t:'assimilated',m:'be an orphan',forms:{
+    past:{he:'يَتِمَ',she:'يَتِمَتْ',you:'يَتِمْتَ',I:'يَتِمْتُ',they:'يَتِمُوا'},
+    present:{he:'يَيْتَمُ',she:'تَيْتَمُ',you:'تَيْتَمُ',I:'أَيْتَمُ',they:'يَيْتَمُونَ'},
+    imperative:{you:'اِيتَمْ',youpl:'اِيتَمُوا'},
+    masdar:{_:'يُتْمٌ'},activepart:{_:'يَاتِمٌ'},passivepart:{_:'مَيْتُومٌ'}}},
+  // Mithāl Yā'ī – 'Alima pattern
+  {r:'ي-ب-س',t:'assimilated',m:'be dry/parched',forms:{
+    past:{he:'يَبِسَ',she:'يَبِسَتْ',you:'يَبِسْتَ',I:'يَبِسْتُ',they:'يَبِسُوا'},
+    present:{he:'يَيْبَسُ',she:'تَيْبَسُ',you:'تَيْبَسُ',I:'أَيْبَسُ',they:'يَيْبَسُونَ'},
+    imperative:{you:'اِيبَسْ',youpl:'اِيبَسُوا'},
+    masdar:{_:'يَبَسٌ'},activepart:{_:'يَابِسٌ'},passivepart:{_:'مَيْبُوسٌ'}}},
+  // Mithāl Yā'ī – Naṣara pattern
+  {r:'ي-م-ن',t:'assimilated',m:'be fortunate/blessed',forms:{
+    past:{he:'يَمَنَ',she:'يَمَنَتْ',you:'يَمَنْتَ',I:'يَمَنْتُ',they:'يَمَنُوا'},
+    present:{he:'يَيْمَنُ',she:'تَيْمَنُ',you:'تَيْمَنُ',I:'أَيْمَنُ',they:'يَيْمَنُونَ'},
+    imperative:{you:'اِيمَنْ',youpl:'اِيمَنُوا'},
+    masdar:{_:'يُمْنٌ'},activepart:{_:'يَامِنٌ'},passivepart:{_:'مَيْمُونٌ'}}},
+
+  // ─ hamzated (مهموز) ──────────────────────────────────────────────────
+  {r:'أ-ك-ل',t:'hamzated',m:'eat',forms:{
+    past:{he:'أَكَلَ',she:'أَكَلَتْ',you:'أَكَلْتَ',I:'أَكَلْتُ',they:'أَكَلُوا'},
+    present:{he:'يَأْكُلُ',she:'تَأْكُلُ',you:'تَأْكُلُ',I:'آكُلُ',they:'يَأْكُلُونَ'},
+    imperative:{you:'كُلْ',youpl:'كُلُوا'},
+    masdar:{_:'أَكْلٌ'},activepart:{_:'آكِلٌ'},passivepart:{_:'مَأْكُولٌ'}}},
+  {r:'أ-م-ر',t:'hamzated',m:'command/order',forms:{
+    past:{he:'أَمَرَ',she:'أَمَرَتْ',you:'أَمَرْتَ',I:'أَمَرْتُ',they:'أَمَرُوا'},
+    present:{he:'يَأْمُرُ',she:'تَأْمُرُ',you:'تَأْمُرُ',I:'آمُرُ',they:'يَأْمُرُونَ'},
+    imperative:{you:'مُرْ',youpl:'مُرُوا'},
+    masdar:{_:'أَمْرٌ'},activepart:{_:'آمِرٌ'},passivepart:{_:'مَأْمُورٌ'}}},
+  {r:'س-أ-ل',t:'hamzated',m:'ask',forms:{
+    past:{he:'سَأَلَ',she:'سَأَلَتْ',you:'سَأَلْتَ',I:'سَأَلْتُ',they:'سَأَلُوا'},
+    present:{he:'يَسْأَلُ',she:'تَسْأَلُ',you:'تَسْأَلُ',I:'أَسْأَلُ',they:'يَسْأَلُونَ'},
+    imperative:{you:'اِسْأَلْ',youpl:'اِسْأَلُوا'},
+    masdar:{_:'سُؤَالٌ'},activepart:{_:'سَائِلٌ'},passivepart:{_:'مَسْؤُولٌ'}}},
+  {r:'ق-ر-أ',t:'hamzated',m:'read/recite',forms:{
+    past:{he:'قَرَأَ',she:'قَرَأَتْ',you:'قَرَأْتَ',I:'قَرَأْتُ',they:'قَرَؤُوا'},
+    present:{he:'يَقْرَأُ',she:'تَقْرَأُ',you:'تَقْرَأُ',I:'أَقْرَأُ',they:'يَقْرَؤُونَ'},
+    imperative:{you:'اِقْرَأْ',youpl:'اِقْرَؤُوا'},
+    masdar:{_:'قِرَاءَةٌ'},activepart:{_:'قَارِئٌ'},passivepart:{_:'مَقْرُوءٌ'}}},
+
+  // ─ mudaaf (مضاعف) ────────────────────────────────────────────────────
+  {r:'م-د-د',t:'mudaaf',m:'extend/stretch',jPres:'يَمْدُدْ',forms:{
+    past:{he:'مَدَّ',she:'مَدَّتْ',you:'مَدَدْتَ',I:'مَدَدْتُ',they:'مَدُّوا'},
+    present:{he:'يَمُدُّ',she:'تَمُدُّ',you:'تَمُدُّ',I:'أَمُدُّ',they:'يَمُدُّونَ'},
+    imperative:{you:'مُدَّ',youpl:'مُدُّوا'},
+    masdar:{_:'مَدٌّ'},activepart:{_:'مَادٌّ'},passivepart:{_:'مَمْدُودٌ'}}},
+  {r:'ر-د-د',t:'mudaaf',m:'return/repel',jPres:'يَرْدُدْ',forms:{
+    past:{he:'رَدَّ',she:'رَدَّتْ',you:'رَدَدْتَ',I:'رَدَدْتُ',they:'رَدُّوا'},
+    present:{he:'يَرُدُّ',she:'تَرُدُّ',you:'تَرُدُّ',I:'أَرُدُّ',they:'يَرُدُّونَ'},
+    imperative:{you:'رُدَّ',youpl:'رُدُّوا'},
+    masdar:{_:'رَدٌّ'},activepart:{_:'رَادٌّ'},passivepart:{_:'مَرْدُودٌ'}}},
+  {r:'ح-ب-ب',t:'mudaaf',m:'love',jPres:'يَحْبِبْ',forms:{
+    past:{he:'حَبَّ',she:'حَبَّتْ',you:'حَبَبْتَ',I:'حَبَبْتُ',they:'حَبُّوا'},
+    present:{he:'يَحِبُّ',she:'تَحِبُّ',you:'تَحِبُّ',I:'أَحِبُّ',they:'يَحِبُّونَ'},
+    imperative:{you:'أَحْبِبْ',youpl:'أَحْبِبُوا'},
+    masdar:{_:'حُبٌّ'},activepart:{_:'مُحِبٌّ'},passivepart:{_:'مَحْبُوبٌ'}}},
+  {r:'ع-ض-ض',t:'mudaaf',m:'bite/chew',jPres:'يَعْضَضْ',forms:{
+    past:{he:'عَضَّ',she:'عَضَّتْ',you:'عَضَضْتَ',I:'عَضَضْتُ',they:'عَضُّوا'},
+    present:{he:'يَعَضُّ',she:'تَعَضُّ',you:'تَعَضُّ',I:'أَعَضُّ',they:'يَعَضُّونَ'},
+    imperative:{you:'عَضَّ',youpl:'عَضُّوا'},
+    masdar:{_:'عَضٌّ'},activepart:{_:'عَاضٌّ'},passivepart:{_:'مَعْضُوضٌ'}}},
+
+  // ─ lafif maqroon (لفيف مقرون) ─────────────────────────────────────────
+  {r:'ق-و-ي',t:'lafif_maqroon',m:'be strong',forms:{
+    past:{he:'قَوِيَ',she:'قَوِيَتْ',you:'قَوِيتَ',I:'قَوِيتُ',they:'قَوُوا'},
+    present:{he:'يَقْوَى',she:'تَقْوَى',you:'تَقْوَى',I:'أَقْوَى',they:'يَقْوَوْنَ'},
+    imperative:{you:'اِقْوَ',youpl:'اِقْوَوْا'},
+    masdar:{_:'قُوَّةٌ'},activepart:{_:'قَاوٍ'},passivepart:{_:'مَقْوِيٌّ'}}},
+  {r:'ش-و-ي',t:'lafif_maqroon',m:'grill/roast',forms:{
+    past:{he:'شَوَى',she:'شَوَتْ',you:'شَوَيْتَ',I:'شَوَيْتُ',they:'شَوَوْا'},
+    present:{he:'يَشْوِي',she:'تَشْوِي',you:'تَشْوِي',I:'أَشْوِي',they:'يَشْوُونَ'},
+    imperative:{you:'اِشْوِ',youpl:'اِشْوُوا'},
+    masdar:{_:'شَيٌّ'},activepart:{_:'شَاوٍ'},passivepart:{_:'مَشْوِيٌّ'}}},
+
+  // ─ lafif mafrooq (لفيف مفروق) ─────────────────────────────────────────
+  {r:'و-ق-ي',t:'lafif_mafrooq',m:'protect/guard',forms:{
+    past:{he:'وَقَى',she:'وَقَتْ',you:'وَقَيْتَ',I:'وَقَيْتُ',they:'وَقَوْا'},
+    present:{he:'يَقِي',she:'تَقِي',you:'تَقِي',I:'أَقِي',they:'يَقُونَ'},
+    imperative:{you:'قِ',youpl:'قُوا'},
+    masdar:{_:'وِقَايَةٌ'},activepart:{_:'وَاقٍ'},passivepart:{_:'مَوْقِيٌّ'}}},
+  {r:'و-ف-ي',t:'lafif_mafrooq',m:'fulfil/be faithful',forms:{
+    past:{he:'وَفَى',she:'وَفَتْ',you:'وَفَيْتَ',I:'وَفَيْتُ',they:'وَفَوْا'},
+    present:{he:'يَفِي',she:'تَفِي',you:'تَفِي',I:'أَفِي',they:'يَفُونَ'},
+    imperative:{you:'فِ',youpl:'فُوا'},
+    masdar:{_:'وَفَاءٌ'},activepart:{_:'وَافٍ'},passivepart:{_:'مَوْفِيٌّ'}}},
+]},
+
+// ─── FORM II ────────────────────────────────────────────────────────────────
+II:{ label:'Form II', pattern:'فَعَّلَ', roots:[
+  {r:'ع-ل-م',t:'sound',m:'teach',forms:{
+    past:{he:'عَلَّمَ',she:'عَلَّمَتْ',you:'عَلَّمْتَ',I:'عَلَّمْتُ',they:'عَلَّمُوا'},
+    present:{he:'يُعَلِّمُ',she:'تُعَلِّمُ',you:'تُعَلِّمُ',I:'أُعَلِّمُ',they:'يُعَلِّمُونَ'},
+    imperative:{you:'عَلِّمْ',youpl:'عَلِّمُوا'},
+    masdar:{_:'تَعْلِيمٌ'},activepart:{_:'مُعَلِّمٌ'},passivepart:{_:'مُعَلَّمٌ'}}},
+  {r:'ق-د-م',t:'sound',m:'present/introduce',forms:{
+    past:{he:'قَدَّمَ',she:'قَدَّمَتْ',you:'قَدَّمْتَ',I:'قَدَّمْتُ',they:'قَدَّمُوا'},
+    present:{he:'يُقَدِّمُ',she:'تُقَدِّمُ',you:'تُقَدِّمُ',I:'أُقَدِّمُ',they:'يُقَدِّمُونَ'},
+    imperative:{you:'قَدِّمْ',youpl:'قَدِّمُوا'},
+    masdar:{_:'تَقْدِيمٌ'},activepart:{_:'مُقَدِّمٌ'},passivepart:{_:'مُقَدَّمٌ'}}},
+  {r:'ك-ب-ر',t:'sound',m:'magnify/glorify',forms:{
+    past:{he:'كَبَّرَ',she:'كَبَّرَتْ',you:'كَبَّرْتَ',I:'كَبَّرْتُ',they:'كَبَّرُوا'},
+    present:{he:'يُكَبِّرُ',she:'تُكَبِّرُ',you:'تُكَبِّرُ',I:'أُكَبِّرُ',they:'يُكَبِّرُونَ'},
+    imperative:{you:'كَبِّرْ',youpl:'كَبِّرُوا'},
+    masdar:{_:'تَكْبِيرٌ'},activepart:{_:'مُكَبِّرٌ'},passivepart:{_:'مُكَبَّرٌ'}}},
+  {r:'ق-و-م',t:'hollow',m:'establish/straighten',forms:{
+    past:{he:'قَوَّمَ',she:'قَوَّمَتْ',you:'قَوَّمْتَ',I:'قَوَّمْتُ',they:'قَوَّمُوا'},
+    present:{he:'يُقَوِّمُ',she:'تُقَوِّمُ',you:'تُقَوِّمُ',I:'أُقَوِّمُ',they:'يُقَوِّمُونَ'},
+    imperative:{you:'قَوِّمْ',youpl:'قَوِّمُوا'},
+    masdar:{_:'تَقْوِيمٌ'},activepart:{_:'مُقَوِّمٌ'},passivepart:{_:'مُقَوَّمٌ'}}},
+  {r:'ب-ي-ن',t:'hollow',m:'clarify/make plain',forms:{
+    past:{he:'بَيَّنَ',she:'بَيَّنَتْ',you:'بَيَّنْتَ',I:'بَيَّنْتُ',they:'بَيَّنُوا'},
+    present:{he:'يُبَيِّنُ',she:'تُبَيِّنُ',you:'تُبَيِّنُ',I:'أُبَيِّنُ',they:'يُبَيِّنُونَ'},
+    imperative:{you:'بَيِّنْ',youpl:'بَيِّنُوا'},
+    masdar:{_:'تَبْيِينٌ'},activepart:{_:'مُبَيِّنٌ'},passivepart:{_:'مُبَيَّنٌ'}}},
+  {r:'ز-ك-ي',t:'defective',m:'purify/commend',forms:{
+    past:{he:'زَكَّى',she:'زَكَّتْ',you:'زَكَّيْتَ',I:'زَكَّيْتُ',they:'زَكَّوْا'},
+    present:{he:'يُزَكِّي',she:'تُزَكِّي',you:'تُزَكِّي',I:'أُزَكِّي',they:'يُزَكُّونَ'},
+    imperative:{you:'زَكِّ',youpl:'زَكُّوا'},
+    masdar:{_:'تَزْكِيَةٌ'},activepart:{_:'مُزَكٍّ'},passivepart:{_:'مُزَكًّى'}}},
+  {r:'س-م-ي',t:'defective',m:'name/call',forms:{
+    past:{he:'سَمَّى',she:'سَمَّتْ',you:'سَمَّيْتَ',I:'سَمَّيْتُ',they:'سَمَّوْا'},
+    present:{he:'يُسَمِّي',she:'تُسَمِّي',you:'تُسَمِّي',I:'أُسَمِّي',they:'يُسَمُّونَ'},
+    imperative:{you:'سَمِّ',youpl:'سَمُّوا'},
+    masdar:{_:'تَسْمِيَةٌ'},activepart:{_:'مُسَمٍّ'},passivepart:{_:'مُسَمًّى'}}},
+  {r:'أ-م-ن',t:'hamzated',m:'make secure/reassure',forms:{
+    past:{he:'أَمَّنَ',she:'أَمَّنَتْ',you:'أَمَّنْتَ',I:'أَمَّنْتُ',they:'أَمَّنُوا'},
+    present:{he:'يُؤَمِّنُ',she:'تُؤَمِّنُ',you:'تُؤَمِّنُ',I:'أُؤَمِّنُ',they:'يُؤَمِّنُونَ'},
+    imperative:{you:'أَمِّنْ',youpl:'أَمِّنُوا'},
+    masdar:{_:'تَأْمِينٌ'},activepart:{_:'مُؤَمِّنٌ'},passivepart:{_:'مُؤَمَّنٌ'}}},
+  {r:'ح-ق-ق',t:'mudaaf',m:'verify/realise',jPres:'يُحَقِّقْ',forms:{
+    past:{he:'حَقَّقَ',she:'حَقَّقَتْ',you:'حَقَّقْتَ',I:'حَقَّقْتُ',they:'حَقَّقُوا'},
+    present:{he:'يُحَقِّقُ',she:'تُحَقِّقُ',you:'تُحَقِّقُ',I:'أُحَقِّقُ',they:'يُحَقِّقُونَ'},
+    imperative:{you:'حَقِّقْ',youpl:'حَقِّقُوا'},
+    masdar:{_:'تَحْقِيقٌ'},activepart:{_:'مُحَقِّقٌ'},passivepart:{_:'مُحَقَّقٌ'}}},
+]},
+
+// ─── FORM III ───────────────────────────────────────────────────────────────
+III:{ label:'Form III', pattern:'فَاعَلَ', roots:[
+  {r:'ك-ت-ب',t:'sound',m:'correspond with',forms:{
+    past:{he:'كَاتَبَ',she:'كَاتَبَتْ',you:'كَاتَبْتَ',I:'كَاتَبْتُ',they:'كَاتَبُوا'},
+    present:{he:'يُكَاتِبُ',she:'تُكَاتِبُ',you:'تُكَاتِبُ',I:'أُكَاتِبُ',they:'يُكَاتِبُونَ'},
+    imperative:{you:'كَاتِبْ',youpl:'كَاتِبُوا'},
+    masdar:{_:'مُكَاتَبَةٌ'},activepart:{_:'مُكَاتِبٌ'},passivepart:{_:'مُكَاتَبٌ'}}},
+  {r:'ق-ت-ل',t:'sound',m:'fight against',forms:{
+    past:{he:'قَاتَلَ',she:'قَاتَلَتْ',you:'قَاتَلْتَ',I:'قَاتَلْتُ',they:'قَاتَلُوا'},
+    present:{he:'يُقَاتِلُ',she:'تُقَاتِلُ',you:'تُقَاتِلُ',I:'أُقَاتِلُ',they:'يُقَاتِلُونَ'},
+    imperative:{you:'قَاتِلْ',youpl:'قَاتِلُوا'},
+    masdar:{_:'مُقَاتَلَةٌ'},activepart:{_:'مُقَاتِلٌ'},passivepart:{_:'مُقَاتَلٌ'}}},
+  {r:'ن-و-ل',t:'hollow',m:'give/offer something',forms:{
+    past:{he:'نَاوَلَ',she:'نَاوَلَتْ',you:'نَاوَلْتَ',I:'نَاوَلْتُ',they:'نَاوَلُوا'},
+    present:{he:'يُنَاوِلُ',she:'تُنَاوِلُ',you:'تُنَاوِلُ',I:'أُنَاوِلُ',they:'يُنَاوِلُونَ'},
+    imperative:{you:'نَاوِلْ',youpl:'نَاوِلُوا'},
+    masdar:{_:'مُنَاوَلَةٌ'},activepart:{_:'مُنَاوِلٌ'},passivepart:{_:'مُنَاوَلٌ'}}},
+  {r:'ق-و-م',t:'hollow',m:'resist/face',forms:{
+    past:{he:'قَاوَمَ',she:'قَاوَمَتْ',you:'قَاوَمْتَ',I:'قَاوَمْتُ',they:'قَاوَمُوا'},
+    present:{he:'يُقَاوِمُ',she:'تُقَاوِمُ',you:'تُقَاوِمُ',I:'أُقَاوِمُ',they:'يُقَاوِمُونَ'},
+    imperative:{you:'قَاوِمْ',youpl:'قَاوِمُوا'},
+    masdar:{_:'مُقَاوَمَةٌ'},activepart:{_:'مُقَاوِمٌ'},passivepart:{_:'مُقَاوَمٌ'}}},
+  {r:'و-ف-ي',t:'lafif_mafrooq',m:'be loyal to',forms:{
+    past:{he:'وَافَى',she:'وَافَتْ',you:'وَافَيْتَ',I:'وَافَيْتُ',they:'وَافَوْا'},
+    present:{he:'يُوَافِي',she:'تُوَافِي',you:'تُوَافِي',I:'أُوَافِي',they:'يُوَافُونَ'},
+    imperative:{you:'وَافِ',youpl:'وَافُوا'},
+    masdar:{_:'مُوَافَاةٌ'},activepart:{_:'مُوَافٍ'},passivepart:{_:'مُوَافًى'}}},
+  {r:'ح-ب-ب',t:'mudaaf',m:'befriend',forms:{
+    past:{he:'حَابَبَ',she:'حَابَبَتْ',you:'حَابَبْتَ',I:'حَابَبْتُ',they:'حَابَبُوا'},
+    present:{he:'يُحَابِبُ',she:'تُحَابِبُ',you:'تُحَابِبُ',I:'أُحَابِبُ',they:'يُحَابِبُونَ'},
+    imperative:{you:'حَابِبْ',youpl:'حَابِبُوا'},
+    masdar:{_:'مُحَابَبَةٌ'},activepart:{_:'مُحَابِبٌ'},passivepart:{_:'مُحَابَبٌ'}}},
+]},
+
+// ─── FORM IV ────────────────────────────────────────────────────────────────
+IV:{ label:'Form IV', pattern:'أَفْعَلَ', roots:[
+  {r:'ع-ل-م',t:'sound',m:'inform/notify',forms:{
+    past:{he:'أَعْلَمَ',she:'أَعْلَمَتْ',you:'أَعْلَمْتَ',I:'أَعْلَمْتُ',they:'أَعْلَمُوا'},
+    present:{he:'يُعْلِمُ',she:'تُعْلِمُ',you:'تُعْلِمُ',I:'أُعْلِمُ',they:'يُعْلِمُونَ'},
+    imperative:{you:'أَعْلِمْ',youpl:'أَعْلِمُوا'},
+    masdar:{_:'إِعْلَامٌ'},activepart:{_:'مُعْلِمٌ'},passivepart:{_:'مُعْلَمٌ'}}},
+  {r:'خ-ر-ج',t:'sound',m:'produce/take out',forms:{
+    past:{he:'أَخْرَجَ',she:'أَخْرَجَتْ',you:'أَخْرَجْتَ',I:'أَخْرَجْتُ',they:'أَخْرَجُوا'},
+    present:{he:'يُخْرِجُ',she:'تُخْرِجُ',you:'تُخْرِجُ',I:'أُخْرِجُ',they:'يُخْرِجُونَ'},
+    imperative:{you:'أَخْرِجْ',youpl:'أَخْرِجُوا'},
+    masdar:{_:'إِخْرَاجٌ'},activepart:{_:'مُخْرِجٌ'},passivepart:{_:'مُخْرَجٌ'}}},
+  {r:'ق-و-م',t:'hollow',m:'set up/erect',jPres:'يُقِمْ',forms:{
+    past:{he:'أَقَامَ',she:'أَقَامَتْ',you:'أَقَمْتَ',I:'أَقَمْتُ',they:'أَقَامُوا'},
+    present:{he:'يُقِيمُ',she:'تُقِيمُ',you:'تُقِيمُ',I:'أُقِيمُ',they:'يُقِيمُونَ'},
+    imperative:{you:'أَقِمْ',youpl:'أَقِيمُوا'},
+    masdar:{_:'إِقَامَةٌ'},activepart:{_:'مُقِيمٌ'},passivepart:{_:'مُقَامٌ'}}},
+  {r:'ه-د-ي',t:'defective',m:'guide',forms:{
+    past:{he:'أَهْدَى',she:'أَهْدَتْ',you:'أَهْدَيْتَ',I:'أَهْدَيْتُ',they:'أَهْدَوْا'},
+    present:{he:'يُهْدِي',she:'تُهْدِي',you:'تُهْدِي',I:'أُهْدِي',they:'يُهْدُونَ'},
+    imperative:{you:'أَهْدِ',youpl:'أَهْدُوا'},
+    masdar:{_:'إِهْدَاءٌ'},activepart:{_:'مُهْدٍ'},passivepart:{_:'مُهْدًى'}}},
+  {r:'ل-ق-ي',t:'defective',m:'cast/throw',forms:{
+    past:{he:'أَلْقَى',she:'أَلْقَتْ',you:'أَلْقَيْتَ',I:'أَلْقَيْتُ',they:'أَلْقَوْا'},
+    present:{he:'يُلْقِي',she:'تُلْقِي',you:'تُلْقِي',I:'أُلْقِي',they:'يُلْقُونَ'},
+    imperative:{you:'أَلْقِ',youpl:'أَلْقُوا'},
+    masdar:{_:'إِلْقَاءٌ'},activepart:{_:'مُلْقٍ'},passivepart:{_:'مُلْقًى'}}},
+  {r:'ب-ق-ي',t:'defective',m:'make (something) remain',forms:{
+    past:{he:'أَبْقَى',she:'أَبْقَتْ',you:'أَبْقَيْتَ',I:'أَبْقَيْتُ',they:'أَبْقَوْا'},
+    present:{he:'يُبْقِي',she:'تُبْقِي',you:'تُبْقِي',I:'أُبْقِي',they:'يُبْقُونَ'},
+    imperative:{you:'أَبْقِ',youpl:'أَبْقُوا'},
+    masdar:{_:'إِبْقَاءٌ'},activepart:{_:'مُبْقٍ'},passivepart:{_:'مُبْقًى'}}},
+  {r:'أ-م-ن',t:'hamzated',m:'believe/have faith',forms:{
+    past:{he:'آمَنَ',she:'آمَنَتْ',you:'آمَنْتَ',I:'آمَنْتُ',they:'آمَنُوا'},
+    present:{he:'يُؤْمِنُ',she:'تُؤْمِنُ',you:'تُؤْمِنُ',I:'أُؤْمِنُ',they:'يُؤْمِنُونَ'},
+    imperative:{you:'آمِنْ',youpl:'آمِنُوا'},
+    masdar:{_:'إِيمَانٌ'},activepart:{_:'مُؤْمِنٌ'},passivepart:{_:'مُؤْمَنٌ'}}},
+  {r:'ح-ب-ب',t:'mudaaf',m:'make beloved',jPres:'يُحْبِبْ',forms:{
+    past:{he:'أَحَبَّ',she:'أَحَبَّتْ',you:'أَحْبَبْتَ',I:'أَحْبَبْتُ',they:'أَحَبُّوا'},
+    present:{he:'يُحِبُّ',she:'تُحِبُّ',you:'تُحِبُّ',I:'أُحِبُّ',they:'يُحِبُّونَ'},
+    imperative:{you:'أَحْبِبْ',youpl:'أَحْبِبُوا'},
+    masdar:{_:'إِحْبَابٌ'},activepart:{_:'مُحِبٌّ'},passivepart:{_:'مُحَبٌّ'}}},
+  {r:'و-ج-ب',t:'assimilated',m:'make obligatory',forms:{
+    past:{he:'أَوْجَبَ',she:'أَوْجَبَتْ',you:'أَوْجَبْتَ',I:'أَوْجَبْتُ',they:'أَوْجَبُوا'},
+    present:{he:'يُوجِبُ',she:'تُوجِبُ',you:'تُوجِبُ',I:'أُوجِبُ',they:'يُوجِبُونَ'},
+    imperative:{you:'أَوْجِبْ',youpl:'أَوْجِبُوا'},
+    masdar:{_:'إِيجَابٌ'},activepart:{_:'مُوجِبٌ'},passivepart:{_:'مُوجَبٌ'}}},
+]},
+
+// ─── FORM V ─────────────────────────────────────────────────────────────────
+V:{ label:'Form V', pattern:'تَفَعَّلَ', roots:[
+  {r:'ع-ل-م',t:'sound',m:'learn/acquire knowledge',forms:{
+    past:{he:'تَعَلَّمَ',she:'تَعَلَّمَتْ',you:'تَعَلَّمْتَ',I:'تَعَلَّمْتُ',they:'تَعَلَّمُوا'},
+    present:{he:'يَتَعَلَّمُ',she:'تَتَعَلَّمُ',you:'تَتَعَلَّمُ',I:'أَتَعَلَّمُ',they:'يَتَعَلَّمُونَ'},
+    imperative:{you:'تَعَلَّمْ',youpl:'تَعَلَّمُوا'},
+    masdar:{_:'تَعَلُّمٌ'},activepart:{_:'مُتَعَلِّمٌ'},passivepart:{_:'مُتَعَلَّمٌ'}}},
+  {r:'ق-د-م',t:'sound',m:'come forward/advance',forms:{
+    past:{he:'تَقَدَّمَ',she:'تَقَدَّمَتْ',you:'تَقَدَّمْتَ',I:'تَقَدَّمْتُ',they:'تَقَدَّمُوا'},
+    present:{he:'يَتَقَدَّمُ',she:'تَتَقَدَّمُ',you:'تَتَقَدَّمُ',I:'أَتَقَدَّمُ',they:'يَتَقَدَّمُونَ'},
+    imperative:{you:'تَقَدَّمْ',youpl:'تَقَدَّمُوا'},
+    masdar:{_:'تَقَدُّمٌ'},activepart:{_:'مُتَقَدِّمٌ'},passivepart:{_:'مُتَقَدَّمٌ'}}},
+  {r:'و-ح-د',t:'assimilated',m:'be unified',forms:{
+    past:{he:'تَوَحَّدَ',she:'تَوَحَّدَتْ',you:'تَوَحَّدْتَ',I:'تَوَحَّدْتُ',they:'تَوَحَّدُوا'},
+    present:{he:'يَتَوَحَّدُ',she:'تَتَوَحَّدُ',you:'تَتَوَحَّدُ',I:'أَتَوَحَّدُ',they:'يَتَوَحَّدُونَ'},
+    imperative:{you:'تَوَحَّدْ',youpl:'تَوَحَّدُوا'},
+    masdar:{_:'تَوَحُّدٌ'},activepart:{_:'مُتَوَحِّدٌ'},passivepart:{_:'مُتَوَحَّدٌ'}}},
+  {r:'ح-و-ل',t:'hollow',m:'transform/change',forms:{
+    past:{he:'تَحَوَّلَ',she:'تَحَوَّلَتْ',you:'تَحَوَّلْتَ',I:'تَحَوَّلْتُ',they:'تَحَوَّلُوا'},
+    present:{he:'يَتَحَوَّلُ',she:'تَتَحَوَّلُ',you:'تَتَحَوَّلُ',I:'أَتَحَوَّلُ',they:'يَتَحَوَّلُونَ'},
+    imperative:{you:'تَحَوَّلْ',youpl:'تَحَوَّلُوا'},
+    masdar:{_:'تَحَوُّلٌ'},activepart:{_:'مُتَحَوِّلٌ'},passivepart:{_:'مُتَحَوَّلٌ'}}},
+  {r:'م-ن-ي',t:'defective',m:'wish/hope',forms:{
+    past:{he:'تَمَنَّى',she:'تَمَنَّتْ',you:'تَمَنَّيْتَ',I:'تَمَنَّيْتُ',they:'تَمَنَّوْا'},
+    present:{he:'يَتَمَنَّى',she:'تَتَمَنَّى',you:'تَتَمَنَّى',I:'أَتَمَنَّى',they:'يَتَمَنَّوْنَ'},
+    imperative:{you:'تَمَنَّ',youpl:'تَمَنَّوْا'},
+    masdar:{_:'تَمَنٍّ'},activepart:{_:'مُتَمَنٍّ'},passivepart:{_:'مُتَمَنًّى'}}},
+  {r:'ح-ق-ق',t:'mudaaf',m:'be verified/confirmed',jPres:'يَتَحَقَّقْ',forms:{
+    past:{he:'تَحَقَّقَ',she:'تَحَقَّقَتْ',you:'تَحَقَّقْتَ',I:'تَحَقَّقْتُ',they:'تَحَقَّقُوا'},
+    present:{he:'يَتَحَقَّقُ',she:'تَتَحَقَّقُ',you:'تَتَحَقَّقُ',I:'أَتَحَقَّقُ',they:'يَتَحَقَّقُونَ'},
+    imperative:{you:'تَحَقَّقْ',youpl:'تَحَقَّقُوا'},
+    masdar:{_:'تَحَقُّقٌ'},activepart:{_:'مُتَحَقِّقٌ'},passivepart:{_:'مُتَحَقَّقٌ'}}},
+]},
+
+// ─── FORM VI ────────────────────────────────────────────────────────────────
+VI:{ label:'Form VI', pattern:'تَفَاعَلَ', roots:[
+  {r:'ق-ت-ل',t:'sound',m:'fight one another',forms:{
+    past:{he:'تَقَاتَلَ',she:'تَقَاتَلَتْ',you:'تَقَاتَلْتَ',I:'تَقَاتَلْتُ',they:'تَقَاتَلُوا'},
+    present:{he:'يَتَقَاتَلُ',she:'تَتَقَاتَلُ',you:'تَتَقَاتَلُ',I:'أَتَقَاتَلُ',they:'يَتَقَاتَلُونَ'},
+    imperative:{you:'تَقَاتَلْ',youpl:'تَقَاتَلُوا'},
+    masdar:{_:'تَقَاتُلٌ'},activepart:{_:'مُتَقَاتِلٌ'},passivepart:{_:'مُتَقَاتَلٌ'}}},
+  {r:'ن-و-ل',t:'hollow',m:'exchange/hand to each other',forms:{
+    past:{he:'تَنَاوَلَ',she:'تَنَاوَلَتْ',you:'تَنَاوَلْتَ',I:'تَنَاوَلْتُ',they:'تَنَاوَلُوا'},
+    present:{he:'يَتَنَاوَلُ',she:'تَتَنَاوَلُ',you:'تَتَنَاوَلُ',I:'أَتَنَاوَلُ',they:'يَتَنَاوَلُونَ'},
+    imperative:{you:'تَنَاوَلْ',youpl:'تَنَاوَلُوا'},
+    masdar:{_:'تَنَاوُلٌ'},activepart:{_:'مُتَنَاوِلٌ'},passivepart:{_:'مُتَنَاوَلٌ'}}},
+  {r:'ع-و-ن',t:'hollow',m:'help one another',forms:{
+    past:{he:'تَعَاوَنَ',she:'تَعَاوَنَتْ',you:'تَعَاوَنْتَ',I:'تَعَاوَنْتُ',they:'تَعَاوَنُوا'},
+    present:{he:'يَتَعَاوَنُ',she:'تَتَعَاوَنُ',you:'تَتَعَاوَنُ',I:'أَتَعَاوَنُ',they:'يَتَعَاوَنُونَ'},
+    imperative:{you:'تَعَاوَنْ',youpl:'تَعَاوَنُوا'},
+    masdar:{_:'تَعَاوُنٌ'},activepart:{_:'مُتَعَاوِنٌ'},passivepart:{_:'مُتَعَاوَنٌ'}}},
+  {r:'د-ع-و',t:'defective',m:'call to one another',forms:{
+    past:{he:'تَدَاعَى',she:'تَدَاعَتْ',you:'تَدَاعَيْتَ',I:'تَدَاعَيْتُ',they:'تَدَاعَوْا'},
+    present:{he:'يَتَدَاعَى',she:'تَتَدَاعَى',you:'تَتَدَاعَى',I:'أَتَدَاعَى',they:'يَتَدَاعَوْنَ'},
+    imperative:{you:'تَدَاعَ',youpl:'تَدَاعَوْا'},
+    masdar:{_:'تَدَاعٍ'},activepart:{_:'مُتَدَاعٍ'},passivepart:{_:'مُتَدَاعًى'}}},
+  {r:'ح-ب-ب',t:'mudaaf',m:'love one another',jPres:'يَتَحَابَبْ',forms:{
+    past:{he:'تَحَابَبَ',she:'تَحَابَبَتْ',you:'تَحَابَبْتَ',I:'تَحَابَبْتُ',they:'تَحَابَبُوا'},
+    present:{he:'يَتَحَابُّ',she:'تَتَحَابُّ',you:'تَتَحَابُّ',I:'أَتَحَابُّ',they:'يَتَحَابُّونَ'},
+    imperative:{you:'تَحَابَبْ',youpl:'تَحَابَبُوا'},
+    masdar:{_:'تَحَابُبٌ'},activepart:{_:'مُتَحَابِبٌ'},passivepart:{_:'مُتَحَابَبٌ'}}},
+]},
+
+// ─── FORM VII ───────────────────────────────────────────────────────────────
+VII:{ label:'Form VII', pattern:'اِنْفَعَلَ', roots:[
+  {r:'ك-س-ر',t:'sound',m:'be broken',forms:{
+    past:{he:'اِنْكَسَرَ',she:'اِنْكَسَرَتْ',you:'اِنْكَسَرْتَ',I:'اِنْكَسَرْتُ',they:'اِنْكَسَرُوا'},
+    present:{he:'يَنْكَسِرُ',she:'تَنْكَسِرُ',you:'تَنْكَسِرُ',I:'أَنْكَسِرُ',they:'يَنْكَسِرُونَ'},
+    imperative:{you:'اِنْكَسِرْ',youpl:'اِنْكَسِرُوا'},
+    masdar:{_:'اِنْكِسَارٌ'},activepart:{_:'مُنْكَسِرٌ'},passivepart:{_:'مُنْكَسَرٌ'}}},
+  {r:'ق-ل-ب',t:'sound',m:'be overturned',forms:{
+    past:{he:'اِنْقَلَبَ',she:'اِنْقَلَبَتْ',you:'اِنْقَلَبْتَ',I:'اِنْقَلَبْتُ',they:'اِنْقَلَبُوا'},
+    present:{he:'يَنْقَلِبُ',she:'تَنْقَلِبُ',you:'تَنْقَلِبُ',I:'أَنْقَلِبُ',they:'يَنْقَلِبُونَ'},
+    imperative:{you:'اِنْقَلِبْ',youpl:'اِنْقَلِبُوا'},
+    masdar:{_:'اِنْقِلَابٌ'},activepart:{_:'مُنْقَلِبٌ'},passivepart:{_:'مُنْقَلَبٌ'}}},
+  {r:'ث-ن-ي',t:'defective',m:'be bent/folded',forms:{
+    past:{he:'اِنْثَنَى',she:'اِنْثَنَتْ',you:'اِنْثَنَيْتَ',I:'اِنْثَنَيْتُ',they:'اِنْثَنَوْا'},
+    present:{he:'يَنْثَنِي',she:'تَنْثَنِي',you:'تَنْثَنِي',I:'أَنْثَنِي',they:'يَنْثَنُونَ'},
+    imperative:{you:'اِنْثَنِ',youpl:'اِنْثَنُوا'},
+    masdar:{_:'اِنْثِنَاءٌ'},activepart:{_:'مُنْثَنٍ'},passivepart:{_:'مُنْثَنًى'}}},
+  {r:'ش-د-د',t:'mudaaf',m:'be tightened/intensified',jPres:'يَنْشَدِدْ',forms:{
+    past:{he:'اِنْشَدَّ',she:'اِنْشَدَّتْ',you:'اِنْشَدَدْتَ',I:'اِنْشَدَدْتُ',they:'اِنْشَدُّوا'},
+    present:{he:'يَنْشَدُّ',she:'تَنْشَدُّ',you:'تَنْشَدُّ',I:'أَنْشَدُّ',they:'يَنْشَدُّونَ'},
+    imperative:{you:'اِنْشَدَّ',youpl:'اِنْشَدُّوا'},
+    masdar:{_:'اِنْشِدَادٌ'},activepart:{_:'مُنْشَدٌّ'},passivepart:{_:'مُنْشَدٌّ'}}},
+]},
+
+// ─── FORM VIII ──────────────────────────────────────────────────────────────
+VIII:{ label:'Form VIII', pattern:'اِفْتَعَلَ', roots:[
+  {r:'ج-م-ع',t:'sound',m:'gather/come together',forms:{
+    past:{he:'اِجْتَمَعَ',she:'اِجْتَمَعَتْ',you:'اِجْتَمَعْتَ',I:'اِجْتَمَعْتُ',they:'اِجْتَمَعُوا'},
+    present:{he:'يَجْتَمِعُ',she:'تَجْتَمِعُ',you:'تَجْتَمِعُ',I:'أَجْتَمِعُ',they:'يَجْتَمِعُونَ'},
+    imperative:{you:'اِجْتَمِعْ',youpl:'اِجْتَمِعُوا'},
+    masdar:{_:'اِجْتِمَاعٌ'},activepart:{_:'مُجْتَمِعٌ'},passivepart:{_:'مُجْتَمَعٌ'}}},
+  {r:'خ-ت-ر',t:'sound',m:'choose/select',jPres:'يَخْتَرْ',forms:{
+    past:{he:'اِخْتَارَ',she:'اِخْتَارَتْ',you:'اِخْتَرْتَ',I:'اِخْتَرْتُ',they:'اِخْتَارُوا'},
+    present:{he:'يَخْتَارُ',she:'تَخْتَارُ',you:'تَخْتَارُ',I:'أَخْتَارُ',they:'يَخْتَارُونَ'},
+    imperative:{you:'اِخْتَرْ',youpl:'اِخْتَارُوا'},
+    masdar:{_:'اِخْتِيَارٌ'},activepart:{_:'مُخْتَارٌ'},passivepart:{_:'مُخْتَارٌ'}}},
+  {r:'ح-و-ج',t:'hollow',m:'be in need',jPres:'يَحْتَجْ',forms:{
+    past:{he:'اِحْتَاجَ',she:'اِحْتَاجَتْ',you:'اِحْتَجْتَ',I:'اِحْتَجْتُ',they:'اِحْتَاجُوا'},
+    present:{he:'يَحْتَاجُ',she:'تَحْتَاجُ',you:'تَحْتَاجُ',I:'أَحْتَاجُ',they:'يَحْتَاجُونَ'},
+    imperative:{you:'اِحْتَجْ',youpl:'اِحْتَاجُوا'},
+    masdar:{_:'اِحْتِيَاجٌ'},activepart:{_:'مُحْتَاجٌ'},passivepart:{_:'مُحْتَاجٌ'}}},
+  {r:'و-ص-ل',t:'assimilated',m:'connect/join (VIII)',forms:{
+    past:{he:'اِتَّصَلَ',she:'اِتَّصَلَتْ',you:'اِتَّصَلْتَ',I:'اِتَّصَلْتُ',they:'اِتَّصَلُوا'},
+    present:{he:'يَتَّصِلُ',she:'تَتَّصِلُ',you:'تَتَّصِلُ',I:'أَتَّصِلُ',they:'يَتَّصِلُونَ'},
+    imperative:{you:'اِتَّصِلْ',youpl:'اِتَّصِلُوا'},
+    masdar:{_:'اِتِّصَالٌ'},activepart:{_:'مُتَّصِلٌ'},passivepart:{_:'مُتَّصَلٌ'}}},
+  {r:'م-د-د',t:'mudaaf',m:'extend/stretch out',jPres:'يَمْتَدِدْ',forms:{
+    past:{he:'اِمْتَدَّ',she:'اِمْتَدَّتْ',you:'اِمْتَدَدْتَ',I:'اِمْتَدَدْتُ',they:'اِمْتَدُّوا'},
+    present:{he:'يَمْتَدُّ',she:'تَمْتَدُّ',you:'تَمْتَدُّ',I:'أَمْتَدُّ',they:'يَمْتَدُّونَ'},
+    imperative:{you:'اِمْتَدَّ',youpl:'اِمْتَدُّوا'},
+    masdar:{_:'اِمْتِدَادٌ'},activepart:{_:'مُمْتَدٌّ'},passivepart:{_:'مُمْتَدٌّ'}}},
+]},
+
+// ─── FORM IX ────────────────────────────────────────────────────────────────
+IX:{ label:'Form IX', pattern:'اِفْعَلَّ', roots:[
+  {r:'ح-م-ر',t:'sound',m:'become red',forms:{
+    past:{he:'اِحْمَرَّ',she:'اِحْمَرَّتْ',you:'اِحْمَرَرْتَ',I:'اِحْمَرَرْتُ',they:'اِحْمَرُّوا'},
+    present:{he:'يَحْمَرُّ',she:'تَحْمَرُّ',you:'تَحْمَرُّ',I:'أَحْمَرُّ',they:'يَحْمَرُّونَ'},
+    imperative:{you:'اِحْمَرَّ',youpl:'اِحْمَرُّوا'},
+    masdar:{_:'اِحْمِرَارٌ'},activepart:{_:'مُحْمَرٌّ'},passivepart:{_:'—'}}},
+  {r:'خ-ض-ر',t:'sound',m:'become green',forms:{
+    past:{he:'اِخْضَرَّ',she:'اِخْضَرَّتْ',you:'اِخْضَرَرْتَ',I:'اِخْضَرَرْتُ',they:'اِخْضَرُّوا'},
+    present:{he:'يَخْضَرُّ',she:'تَخْضَرُّ',you:'تَخْضَرُّ',I:'أَخْضَرُّ',they:'يَخْضَرُّونَ'},
+    imperative:{you:'اِخْضَرَّ',youpl:'اِخْضَرُّوا'},
+    masdar:{_:'اِخْضِرَارٌ'},activepart:{_:'مُخْضَرٌّ'},passivepart:{_:'—'}}},
+  {r:'ص-ف-ر',t:'sound',m:'become yellow/pale',forms:{
+    past:{he:'اِصْفَرَّ',she:'اِصْفَرَّتْ',you:'اِصْفَرَرْتَ',I:'اِصْفَرَرْتُ',they:'اِصْفَرُّوا'},
+    present:{he:'يَصْفَرُّ',she:'تَصْفَرُّ',you:'تَصْفَرُّ',I:'أَصْفَرُّ',they:'يَصْفَرُّونَ'},
+    imperative:{you:'اِصْفَرَّ',youpl:'اِصْفَرُّوا'},
+    masdar:{_:'اِصْفِرَارٌ'},activepart:{_:'مُصْفَرٌّ'},passivepart:{_:'—'}}},
+  {r:'س-و-د',t:'sound',m:'become black',forms:{
+    past:{he:'اِسْوَدَّ',she:'اِسْوَدَّتْ',you:'اِسْوَدَدْتَ',I:'اِسْوَدَدْتُ',they:'اِسْوَدُّوا'},
+    present:{he:'يَسْوَدُّ',she:'تَسْوَدُّ',you:'تَسْوَدُّ',I:'أَسْوَدُّ',they:'يَسْوَدُّونَ'},
+    imperative:{you:'اِسْوَدَّ',youpl:'اِسْوَدُّوا'},
+    masdar:{_:'اِسْوِدَادٌ'},activepart:{_:'مُسْوَدٌّ'},passivepart:{_:'—'}}},
+  {r:'ب-ي-ض',t:'sound',m:'become white',forms:{
+    past:{he:'اِبْيَضَّ',she:'اِبْيَضَّتْ',you:'اِبْيَضَضْتَ',I:'اِبْيَضَضْتُ',they:'اِبْيَضُّوا'},
+    present:{he:'يَبْيَضُّ',she:'تَبْيَضُّ',you:'تَبْيَضُّ',I:'أَبْيَضُّ',they:'يَبْيَضُّونَ'},
+    imperative:{you:'اِبْيَضَّ',youpl:'اِبْيَضُّوا'},
+    masdar:{_:'اِبْيِضَاضٌ'},activepart:{_:'مُبْيَضٌّ'},passivepart:{_:'—'}}},
+  {r:'ز-ر-ق',t:'sound',m:'become blue',forms:{
+    past:{he:'اِزْرَقَّ',she:'اِزْرَقَّتْ',you:'اِزْرَقَقْتَ',I:'اِزْرَقَقْتُ',they:'اِزْرَقُّوا'},
+    present:{he:'يَزْرَقُّ',she:'تَزْرَقُّ',you:'تَزْرَقُّ',I:'أَزْرَقُّ',they:'يَزْرَقُّونَ'},
+    imperative:{you:'اِزْرَقَّ',youpl:'اِزْرَقُّوا'},
+    masdar:{_:'اِزْرِقَاقٌ'},activepart:{_:'مُزْرَقٌّ'},passivepart:{_:'—'}}},
+]},
+
+// ─── FORM X ─────────────────────────────────────────────────────────────────
+X:{ label:'Form X', pattern:'اِسْتَفْعَلَ', roots:[
+  {r:'ع-ل-م',t:'sound',m:'inquire/seek knowledge',forms:{
+    past:{he:'اِسْتَعْلَمَ',she:'اِسْتَعْلَمَتْ',you:'اِسْتَعْلَمْتَ',I:'اِسْتَعْلَمْتُ',they:'اِسْتَعْلَمُوا'},
+    present:{he:'يَسْتَعْلِمُ',she:'تَسْتَعْلِمُ',you:'تَسْتَعْلِمُ',I:'أَسْتَعْلِمُ',they:'يَسْتَعْلِمُونَ'},
+    imperative:{you:'اِسْتَعْلِمْ',youpl:'اِسْتَعْلِمُوا'},
+    masdar:{_:'اِسْتِعْلَامٌ'},activepart:{_:'مُسْتَعْلِمٌ'},passivepart:{_:'مُسْتَعْلَمٌ'}}},
+  {r:'غ-ف-ر',t:'sound',m:'seek forgiveness',forms:{
+    past:{he:'اِسْتَغْفَرَ',she:'اِسْتَغْفَرَتْ',you:'اِسْتَغْفَرْتَ',I:'اِسْتَغْفَرْتُ',they:'اِسْتَغْفَرُوا'},
+    present:{he:'يَسْتَغْفِرُ',she:'تَسْتَغْفِرُ',you:'تَسْتَغْفِرُ',I:'أَسْتَغْفِرُ',they:'يَسْتَغْفِرُونَ'},
+    imperative:{you:'اِسْتَغْفِرْ',youpl:'اِسْتَغْفِرُوا'},
+    masdar:{_:'اِسْتِغْفَارٌ'},activepart:{_:'مُسْتَغْفِرٌ'},passivepart:{_:'مُسْتَغْفَرٌ'}}},
+  {r:'ج-و-ب',t:'hollow',m:'seek a response',jPres:'يَسْتَجِبْ',forms:{
+    past:{he:'اِسْتَجَابَ',she:'اِسْتَجَابَتْ',you:'اِسْتَجَبْتَ',I:'اِسْتَجَبْتُ',they:'اِسْتَجَابُوا'},
+    present:{he:'يَسْتَجِيبُ',she:'تَسْتَجِيبُ',you:'تَسْتَجِيبُ',I:'أَسْتَجِيبُ',they:'يَسْتَجِيبُونَ'},
+    imperative:{you:'اِسْتَجِبْ',youpl:'اِسْتَجِيبُوا'},
+    masdar:{_:'اِسْتِجَابَةٌ'},activepart:{_:'مُسْتَجِيبٌ'},passivepart:{_:'مُسْتَجَابٌ'}}},
+  {r:'ق-و-م',t:'hollow',m:'be upright/steadfast',jPres:'يَسْتَقِمْ',forms:{
+    past:{he:'اِسْتَقَامَ',she:'اِسْتَقَامَتْ',you:'اِسْتَقَمْتَ',I:'اِسْتَقَمْتُ',they:'اِسْتَقَامُوا'},
+    present:{he:'يَسْتَقِيمُ',she:'تَسْتَقِيمُ',you:'تَسْتَقِيمُ',I:'أَسْتَقِيمُ',they:'يَسْتَقِيمُونَ'},
+    imperative:{you:'اِسْتَقِمْ',youpl:'اِسْتَقِيمُوا'},
+    masdar:{_:'اِسْتِقَامَةٌ'},activepart:{_:'مُسْتَقِيمٌ'},passivepart:{_:'مُسْتَقَامٌ'}}},
+  {r:'د-ع-و',t:'defective',m:'summon/call upon',forms:{
+    past:{he:'اِسْتَدْعَى',she:'اِسْتَدْعَتْ',you:'اِسْتَدْعَيْتَ',I:'اِسْتَدْعَيْتُ',they:'اِسْتَدْعَوْا'},
+    present:{he:'يَسْتَدْعِي',she:'تَسْتَدْعِي',you:'تَسْتَدْعِي',I:'أَسْتَدْعِي',they:'يَسْتَدْعُونَ'},
+    imperative:{you:'اِسْتَدْعِ',youpl:'اِسْتَدْعُوا'},
+    masdar:{_:'اِسْتِدْعَاءٌ'},activepart:{_:'مُسْتَدْعٍ'},passivepart:{_:'مُسْتَدْعًى'}}},
+  {r:'أ-ذ-ن',t:'hamzated',m:'seek permission',forms:{
+    past:{he:'اِسْتَأْذَنَ',she:'اِسْتَأْذَنَتْ',you:'اِسْتَأْذَنْتَ',I:'اِسْتَأْذَنْتُ',they:'اِسْتَأْذَنُوا'},
+    present:{he:'يَسْتَأْذِنُ',she:'تَسْتَأْذِنُ',you:'تَسْتَأْذِنُ',I:'أَسْتَأْذِنُ',they:'يَسْتَأْذِنُونَ'},
+    imperative:{you:'اِسْتَأْذِنْ',youpl:'اِسْتَأْذِنُوا'},
+    masdar:{_:'اِسْتِئْذَانٌ'},activepart:{_:'مُسْتَأْذِنٌ'},passivepart:{_:'مُسْتَأْذَنٌ'}}},
+  {r:'م-ر-ر',t:'mudaaf',m:'continue/persist',jPres:'يَسْتَمْرِرْ',forms:{
+    past:{he:'اِسْتَمَرَّ',she:'اِسْتَمَرَّتْ',you:'اِسْتَمْرَرْتَ',I:'اِسْتَمْرَرْتُ',they:'اِسْتَمَرُّوا'},
+    present:{he:'يَسْتَمِرُّ',she:'تَسْتَمِرُّ',you:'تَسْتَمِرُّ',I:'أَسْتَمِرُّ',they:'يَسْتَمِرُّونَ'},
+    imperative:{you:'اِسْتَمِرَّ',youpl:'اِسْتَمِرُّوا'},
+    masdar:{_:'اِسْتِمْرَارٌ'},activepart:{_:'مُسْتَمِرٌّ'},passivepart:{_:'مُسْتَمَرٌّ'}}},
+]}
+
+}; // END DATA
+
+const CONJ_LABELS={
+  past:'Past — ماضي',
+  present:'Present — مضارع',
+  imperative:'Imperative — أمر',
+  masdar:'Verbal noun — مصدر',
+  activepart:'Active participle — اسم فاعل',
+  passivepart:'Passive participle — اسم مفعول'
+};
+const PERSON_LABELS={he:'He (هو)',she:'She (هي)',you:'You (أنتَ)',I:'I (أنا)',they:'They (هم)',youpl:'You all (أنتم)',_:'Base form'};
+const MEANING_SFXS={past:' (he)',present:' (he)',imperative:'',masdar:'',activepart:'',passivepart:''};
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let state={
+  correct:0,total:0,streak:0,
+  currentAnswer:'',checked:false,
+  isIraab:false,iraabAnswers:null,currentRoot:null,
+  timerMode:'stopwatch',timerInterval:null,timerStart:null,
+  timerRunning:false,timerExpired:false
+};
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function normalize(s){return s.replace(/[\u064B-\u065F\u0670]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').trim();}
+function hasDia(s){return /[\u064B-\u065F\u0670]/.test(s);}
+function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+function matchOk(typed,expected){return typed===expected||normalize(typed)===normalize(expected);}
+
+// ── TIMER ─────────────────────────────────────────────────────────────────────
+function stopTimer(){if(state.timerInterval){clearInterval(state.timerInterval);state.timerInterval=null;}state.timerRunning=false;}
+function resetTimer(){
+  stopTimer();state.timerStart=null;state.timerExpired=false;
+  const el=document.getElementById('timer');el.className='timer-display';
+  el.textContent=state.timerMode==='stopwatch'?'00:00':fmt(parseInt(state.timerMode));
+}
+function startTimer(){
+  if(state.timerRunning)return;
+  state.timerRunning=true;state.timerStart=Date.now();
+  const el=document.getElementById('timer');el.className='timer-display running';
+  if(state.timerMode==='stopwatch'){
+    state.timerInterval=setInterval(()=>{el.textContent=fmt(Math.floor((Date.now()-state.timerStart)/1000));},500);
+  }else{
+    const total=parseInt(state.timerMode);
+    state.timerInterval=setInterval(()=>{
+      const rem=total-Math.floor((Date.now()-state.timerStart)/1000);
+      if(rem<=0){
+        stopTimer();el.textContent='00:00';el.className='timer-display expired';state.timerExpired=true;
+        document.getElementById('arabic-input').disabled=true;
+        document.getElementById('btn-check').disabled=true;
+        document.getElementById('inp-rafa').disabled=true;
+        document.getElementById('inp-nasb').disabled=true;
+        document.getElementById('inp-jazm').disabled=true;
+        const fl=document.getElementById('streak-flash');
+        fl.textContent=`⏱ Time's up! ${state.correct}/${state.total} correct`;fl.style.color='var(--red)';
+      }else{el.textContent=fmt(rem);if(rem<=10)el.className='timer-display expired';}
+    },500);
+  }
+}
+
+// ── ERROR JIGGLE ──────────────────────────────────────────────────────────────
+function showError(msg){
+  const e=document.getElementById('error-msg');
+  const c=document.getElementById('controls-wrap');
+  e.textContent=msg;e.classList.add('show');
+  c.classList.remove('jiggle');void c.offsetWidth;c.classList.add('jiggle');
+  setTimeout(()=>e.classList.remove('show'),4500);
+}
+
+// ── VOCAB REVEAL ──────────────────────────────────────────────────────────────
+function showVocab(rootEntry, formLabel) {
+  const rootDisp = rootEntry.r.split('-').join(' - ');
+  return {
+    arabic: rootEntry.forms.past.he,
+    meaning: rootEntry.m,
+    root: `Root: ${rootDisp} · ${formLabel}`
+  };
+}
+
+// ── GENERATE ──────────────────────────────────────────────────────────────────
+function generatePrompt(){
+  if(state.timerExpired)return;
+  const selForm=document.getElementById('sel-form').value;
+  const selConj=document.getElementById('sel-conj').value;
+  const selIrreg=document.getElementById('sel-irreg').value;
+
+  const formKeys=selForm==='all'?Object.keys(DATA):(DATA[selForm]?[selForm]:Object.keys(DATA));
+  let candidates=[];
+  for(const fk of formKeys){
+    const fd=DATA[fk];
+    for(const root of fd.roots){
+      if(selIrreg!=='all'&&root.t!==selIrreg)continue;
+      const conjKeys=selConj==='all'?Object.keys(CONJ_LABELS):[selConj];
+      for(const ck of conjKeys){
+        const group=root.forms[ck];if(!group)continue;
+        for(const pk of Object.keys(group)){
+          if(group[pk]==='—')continue;
+          candidates.push({fk,fd,root,conj:ck,person:pk,answer:group[pk]});
+        }
+      }
+    }
+  }
+
+  if(candidates.length===0){
+    const iMap={'all':'any irregularity','hollow':'hollow (أجوف)','defective':'defective (ناقص)',
+      'assimilated':'assimilated (مثال)','hamzated':'hamzated (مهموز)','mudaaf':'geminate (مضاعف)',
+      'lafif_maqroon':'lafīf maqrūn','lafif_mafrooq':'lafīf mafrūq'}[selIrreg]||selIrreg;
+    const fLabel=selForm==='all'?'any form':(DATA[selForm]?DATA[selForm].label:selForm);
+    showError(`No data yet for ${iMap} verbs in ${fLabel}. Try widening your filters.`);
+    return;
+  }
+
+  const pick=candidates[Math.floor(Math.random()*candidates.length)];
+  const meaningStr=pick.person==='_'?pick.root.m:pick.root.m+(MEANING_SFXS[pick.conj]||'');
+  const personLabel=pick.person==='_'?'':` · ${PERSON_LABELS[pick.person]}`;
+
+  document.getElementById('cell-root').textContent=pick.root.r.split('-').join(' - ');
+  document.getElementById('cell-form').textContent=`${pick.fd.label} (${pick.fd.pattern})`;
+  document.getElementById('cell-conj').textContent=CONJ_LABELS[pick.conj]+personLabel;
+  document.getElementById('cell-meaning').textContent=meaningStr;
+
+  state.checked=false;
+  state.currentRoot=pick;
+  document.getElementById('feedback').className='feedback';
+  document.getElementById('vocab-reveal').style.display='none';
+  document.getElementById('iraab-vocab').style.display='none';
+  const fl=document.getElementById('streak-flash');fl.textContent='';fl.style.color='var(--gold-bright)';
+  document.getElementById('error-msg').classList.remove('show');
+  document.getElementById('welcome').style.display='none';
+  document.getElementById('card').classList.remove('hidden');
+
+  // ── PRESENT TENSE: i'rab mode (هو only) ──────────────────────────────────
+  if(pick.conj==='present'){
+    state.isIraab=true;
+    // Always use هو form for i'rab teaching
+    const heForm=pick.root.forms.present.he;
+    state.iraabAnswers=deriveIraab(heForm, pick.root.jPres||null);
+    state.currentAnswer='';
+
+    // Update the conjugation cell to always say هو
+    document.getElementById('cell-conj').textContent='Present — مضارع · هو (marfūʿ / manṣūb / majzūm)';
+
+    document.getElementById('single-input-area').style.display='none';
+    document.getElementById('iraab-wrap').classList.add('active');
+    document.getElementById('iraab-result').className='iraab-result';
+    document.getElementById('iraab-results-row').innerHTML='';
+    document.getElementById('iraab-note').textContent='';
+
+    ['inp-rafa','inp-nasb','inp-jazm'].forEach(id=>{
+      const el=document.getElementById(id);
+      el.value='';el.className='iraab-input';el.disabled=false;
+    });
+    document.getElementById('inp-rafa').focus();
+    document.getElementById('prompt-instruction').textContent='Provide all three i\'rāb states for هو';
+
+  } else {
+    // ── Non-present: standard single input ─────────────────────────────────
+    state.isIraab=false;
+    state.currentAnswer=pick.answer;
+
+    document.getElementById('iraab-wrap').classList.remove('active');
+    document.getElementById('single-input-area').style.display='flex';
+    const inp=document.getElementById('arabic-input');
+    inp.value='';inp.className='arabic-input';inp.disabled=false;
+    document.getElementById('btn-check').disabled=false;
+    inp.focus();
+    document.getElementById('prompt-instruction').textContent='Type the conjugated Arabic word below';
+  }
+}
+
+// ── CHECK (standard) ──────────────────────────────────────────────────────────
+function checkAnswer(){
+  if(state.checked){generatePrompt();return;}
+  const inp=document.getElementById('arabic-input');
+  const val=inp.value.trim();if(!val)return;
+  state.checked=true;state.total++;
+  document.getElementById('stat-total').textContent=state.total;
+
+  const correct=state.currentAnswer;
+  const isExact=val===correct;
+  const isNorm=!isExact&&normalize(val)===normalize(correct);
+  const isCorrect=isExact||isNorm;
+  const userHasDia=hasDia(val);
+  const cHasDia=hasDia(correct);
+
+  const fb=document.getElementById('feedback');
+  const fbTitle=document.getElementById('fb-title');
+  const fbAnswer=document.getElementById('fb-answer');
+  const fbNote=document.getElementById('fb-note');
+  const fl=document.getElementById('streak-flash');
+  const vocabEl=document.getElementById('vocab-reveal');
+
+  if(isCorrect){
+    state.correct++;state.streak++;
+    inp.className='arabic-input correct';fb.className='feedback correct-fb show';
+    if(isExact){
+      fbTitle.textContent=cHasDia&&userHasDia?'✓ Correct — with full harakāt':'✓ Correct';
+      fbNote.textContent=cHasDia&&userHasDia?'Excellent — full harakāt included.':'Correct. Try including full harakāt.';
+    }else{fbTitle.textContent='✓ Correct (letters match)';fbNote.textContent='Right word, but harakāt differ.';}
+    fbAnswer.textContent=correct;
+    // Vocab reveal
+    const v=showVocab(state.currentRoot.root,state.currentRoot.fd.label);
+    document.getElementById('vocab-arabic').textContent=v.arabic;
+    document.getElementById('vocab-meaning').textContent=v.meaning;
+    document.getElementById('vocab-root').textContent=v.root;
+    vocabEl.style.display='flex';
+    if(state.streak>=5){fl.textContent=`🔥 ${state.streak} in a row!`;fl.style.color='var(--gold-bright)';}
+    else fl.textContent='';
+  }else{
+    state.streak=0;inp.className='arabic-input incorrect';fb.className='feedback incorrect-fb show';
+    fbTitle.textContent='✗ Incorrect';fbAnswer.textContent=correct;
+    fbNote.textContent='The correct form is above. Press Check again to continue.';fl.textContent='';
+    vocabEl.style.display='none';
+  }
+  document.getElementById('stat-correct').textContent=state.correct;
+  document.getElementById('stat-streak').textContent=state.streak;
+  inp.disabled=true;
+}
+
+// ── CHECK I'RAB ───────────────────────────────────────────────────────────────
+function checkIraab(){
+  if(state.checked){generatePrompt();return;}
+  const rVal=document.getElementById('inp-rafa').value.trim();
+  const nVal=document.getElementById('inp-nasb').value.trim();
+  const jVal=document.getElementById('inp-jazm').value.trim();
+  if(!rVal&&!nVal&&!jVal)return;
+
+  state.checked=true;state.total++;
+  document.getElementById('stat-total').textContent=state.total;
+
+  const {r:rAns,n:nAns,j:jAns}=state.iraabAnswers;
+  const rOk=matchOk(rVal,rAns);
+  const nOk=matchOk(nVal,nAns);
+  const jOk=matchOk(jVal,jAns);
+  const allOk=rOk&&nOk&&jOk;
+
+  // Color each input
+  document.getElementById('inp-rafa').className='iraab-input '+(rOk?'correct':'incorrect');
+  document.getElementById('inp-nasb').className='iraab-input '+(nOk?'correct':'incorrect');
+  document.getElementById('inp-jazm').className='iraab-input '+(jOk?'correct':'incorrect');
+
+  // Results panel
+  const resRow=document.getElementById('iraab-results-row');
+  resRow.innerHTML=[
+    {label:'مَرْفُوع',ok:rOk,ans:rAns},
+    {label:'مَنْصُوب',ok:nOk,ans:nAns},
+    {label:'مَجْزُوم',ok:jOk,ans:jAns}
+  ].map(x=>`
+    <div class="iraab-res-cell">
+      <div class="iraab-res-label ${x.ok?'ok':'err'}">${x.ok?'✓':'✗'} ${x.label}</div>
+      <div class="iraab-res-form">${x.ans}</div>
+    </div>`).join('');
+
+  const resultEl=document.getElementById('iraab-result');
+  resultEl.className='iraab-result show '+(allOk?'all-correct':'has-error');
+
+  const fl=document.getElementById('streak-flash');
+  if(allOk){
+    state.correct++;state.streak++;
+    document.getElementById('iraab-note').textContent=
+      'All three i\'rāb states correct!';
+    if(state.streak>=5){fl.textContent=`🔥 ${state.streak} in a row!`;fl.style.color='var(--gold-bright)';}
+    else fl.textContent='';
+    // Vocab reveal
+    const v=showVocab(state.currentRoot.root,state.currentRoot.fd.label);
+    const vEl=document.getElementById('iraab-vocab');
+    document.getElementById('iraab-vocab-arabic').textContent=v.arabic;
+    document.getElementById('iraab-vocab-meaning').textContent=v.meaning;
+    document.getElementById('iraab-vocab-root').textContent=v.root;
+    vEl.style.display='flex';
+  }else{
+    state.streak=0;
+    document.getElementById('iraab-note').textContent='Incorrect forms shown above. Press Check to continue.';
+    fl.textContent='';
+    document.getElementById('iraab-vocab').style.display='none';
+  }
+
+  document.getElementById('stat-correct').textContent=state.correct;
+  document.getElementById('stat-streak').textContent=state.streak;
+  ['inp-rafa','inp-nasb','inp-jazm'].forEach(id=>{document.getElementById(id).disabled=true;});
+}
+
+// ── TIMER SETTINGS ────────────────────────────────────────────────────────────
+const dropdown=document.getElementById('settings-dropdown');
+document.getElementById('btn-timer-settings').addEventListener('click',e=>{e.stopPropagation();dropdown.classList.toggle('open');});
+document.addEventListener('click',()=>dropdown.classList.remove('open'));
+dropdown.querySelectorAll('.settings-opt').forEach(opt=>{
+  opt.addEventListener('click',e=>{
+    e.stopPropagation();
+    dropdown.querySelectorAll('.settings-opt').forEach(o=>o.classList.remove('active'));
+    opt.classList.add('active');state.timerMode=opt.dataset.mode;
+    dropdown.classList.remove('open');resetTimer();
+  });
+});
+document.getElementById('btn-reset-timer').addEventListener('click',()=>{
+  const was=state.timerExpired;resetTimer();
+  if(was){
+    state.timerExpired=false;
+    ['arabic-input','btn-check','inp-rafa','inp-nasb','inp-jazm'].forEach(id=>{
+      const e=document.getElementById(id);if(e)e.disabled=false;
+    });
+    const fl=document.getElementById('streak-flash');fl.textContent='';fl.style.color='var(--gold-bright)';
+  }
+});
+
+// ── BUTTONS & KEYS ────────────────────────────────────────────────────────────
+document.getElementById('btn-gen').addEventListener('click',()=>{startTimer();generatePrompt();});
+document.getElementById('btn-check').addEventListener('click',checkAnswer);
+document.getElementById('btn-skip').addEventListener('click',()=>{state.streak=0;document.getElementById('stat-streak').textContent=0;generatePrompt();});
+document.getElementById('btn-check-iraab').addEventListener('click',checkIraab);
+document.getElementById('btn-skip-iraab').addEventListener('click',()=>{state.streak=0;document.getElementById('stat-streak').textContent=0;generatePrompt();});
+
+document.getElementById('arabic-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.shiftKey){state.streak=0;document.getElementById('stat-streak').textContent=0;generatePrompt();}
+  else if(e.key==='Enter')checkAnswer();
+});
+['inp-rafa','inp-nasb','inp-jazm'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&e.shiftKey){state.streak=0;document.getElementById('stat-streak').textContent=0;generatePrompt();}
+    else if(e.key==='Enter')checkIraab();
+  });
+});
+</script>
+</body>
+</html>
