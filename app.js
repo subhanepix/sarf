@@ -676,6 +676,95 @@ X:{ label:'Form X', pattern:'اِسْتَفْعَلَ', roots:[
 
 }; // END DATA
 
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPANDED VERB SET — morphology generator for Form I sound verbs
+// Data source: Arramooz Arabic morphology dictionary (linuxscout/arramooz),
+// filtered to triliteral Form I verbs with no weak letters, hamzas, or
+// doubled radicals (~4,800 entries).
+// ═══════════════════════════════════════════════════════════════════════════
+
+// bab → (past V2, present V2). 1=a-u, 2=a-i, 3=a-a, 4=i-a, 5=u-u, 6=i-i
+const BAB_VOWELS = {
+  1: {pv:F,  prv:D},
+  2: {pv:F,  prv:KS},
+  3: {pv:F,  prv:F},
+  4: {pv:KS, prv:F},
+  5: {pv:D,  prv:D},
+  6: {pv:KS, prv:KS},
+};
+const TANWIN_D = '\u064C'; // ٌ
+
+// Generate full Form I sound paradigm from (root, bab).
+// `root` is a 3-character Arabic string like "كتب".
+function genForm1Sound(root, bab) {
+  const c1 = root[0], c2 = root[1], c3 = root[2];
+  const v = BAB_VOWELS[bab] || BAB_VOWELS[1];
+  const pv = v.pv, prv = v.prv;
+
+  // Past
+  const pastLongStem  = c1+F + c2+pv + c3+F;        // كَتَبَ-style (no trailing letter)
+  const pastShortStem = c1+F + c2+pv + c3+SK;       // كَتَبْ (subject-stem base)
+  const past = {
+    he:    pastLongStem,
+    she:   pastLongStem + 'ت' + SK,
+    you:   pastShortStem + 'ت' + F,
+    I:     pastShortStem + 'ت' + D,
+    they:  c1+F + c2+pv + c3+D + 'و' + 'ا',
+  };
+
+  // Present — prefix letter + fatha + C1+SK + C2+prv + C3+damma
+  const presCore = c1+SK + c2+prv + c3+D;
+  const present = {
+    he:   'ي' + F + presCore,
+    she:  'ت' + F + presCore,
+    you:  'ت' + F + presCore,
+    I:    'أ' + F + presCore,
+    they: 'ي' + F + c1+SK + c2+prv + c3+D + 'و' + 'ن' + F,
+  };
+
+  // Imperative — hamzat-wasl prefix: damma if present V2 is damma, else kasra.
+  const impPrefix = 'ا' + (prv === D ? D : KS);
+  const imperative = {
+    you:   impPrefix + c1+SK + c2+prv + c3+SK,
+    youpl: impPrefix + c1+SK + c2+prv + c3+D + 'و' + 'ا',
+  };
+
+  // Active / passive participles — regular فَاعِل / مَفْعُول patterns
+  const activepart  = {_: c1+F + 'ا' + c2+KS + c3+TANWIN_D};
+  const passivepart = {_: 'م'+F + c1+SK + c2+D + 'و' + c3+TANWIN_D};
+
+  // Masdar is lexical for Form I — not generable. Omitted.
+  return {past, present, imperative, activepart, passivepart};
+}
+
+// Display-friendly root: insert dashes between letters (e.g., ك-ت-ب)
+function dashRoot(root) { return root.split('').join('-'); }
+
+// Lazy-loaded expanded verb set
+let EXPANDED_VERBS = null;
+let EXPANDED_LOADING = null;
+function loadExpandedVerbs() {
+  if (EXPANDED_VERBS) return Promise.resolve(EXPANDED_VERBS);
+  if (EXPANDED_LOADING) return EXPANDED_LOADING;
+  EXPANDED_LOADING = fetch('verbs_form1_sound.json')
+    .then(r => r.json())
+    .then(data => { EXPANDED_VERBS = data; return data; })
+    .catch(err => { console.error('Failed to load expanded verbs:', err); EXPANDED_VERBS = []; return []; });
+  return EXPANDED_LOADING;
+}
+
+// Build a "root entry" object (shape compatible with curated DATA) from an
+// Arramooz {r: "كتب", b: 1} record.
+function buildExpandedRoot(entry) {
+  const forms = genForm1Sound(entry.r, entry.b);
+  return {
+    r: dashRoot(entry.r),
+    t: 'sound',
+    m: '',  // no English gloss in this dataset
+    forms,
+  };
+}
+
 const CONJ_LABELS={
   past:'Past — ماضي',
   present:'Present — مضارع',
@@ -747,7 +836,7 @@ function showVocab(rootEntry, formLabel) {
   const rootDisp = rootEntry.r.split('-').join(' - ');
   return {
     arabic: rootEntry.forms.past.he,
-    meaning: rootEntry.m,
+    meaning: rootEntry.m || '(no English gloss in expanded set)',
     root: `Root: ${rootDisp} · ${formLabel}`
   };
 }
@@ -755,8 +844,42 @@ function showVocab(rootEntry, formLabel) {
 // ── GENERATE ──────────────────────────────────────────────────────────────────
 function generatePrompt(){
   if(state.timerExpired)return;
-  const selForm=document.getElementById('sel-form').value;
+  const verbset=document.getElementById('sel-verbset').value;
   const selConj=document.getElementById('sel-conj').value;
+
+  // ── EXPANDED SET — generate on the fly from Arramooz data ─────────────────
+  if(verbset==='expanded'){
+    if(!EXPANDED_VERBS){
+      // Trigger load and retry once ready
+      loadExpandedVerbs().then(()=>generatePrompt());
+      showError('Loading expanded verb set…');
+      return;
+    }
+    if(EXPANDED_VERBS.length===0){ showError('Expanded verb set failed to load.'); return; }
+
+    // Expanded supports: past, present, imperative, activepart, passivepart (no masdar)
+    const EXPANDED_CONJS = ['past','present','imperative','activepart','passivepart'];
+    let conjs;
+    if(selConj==='all') conjs = EXPANDED_CONJS;
+    else if(selConj==='masdar'){
+      showError('Masdar (مصدر) is lexical in Form I and cannot be generated. Pick another conjugation, or switch to the Curated set.');
+      return;
+    } else conjs = [selConj];
+
+    // Pick random entry, random conjugation, random person
+    const entry = EXPANDED_VERBS[Math.floor(Math.random()*EXPANDED_VERBS.length)];
+    const conj = conjs[Math.floor(Math.random()*conjs.length)];
+    const root = buildExpandedRoot(entry);
+    const group = root.forms[conj];
+    const personKeys = Object.keys(group);
+    const person = personKeys[Math.floor(Math.random()*personKeys.length)];
+    const fd = DATA.I;  // reuse Form I descriptor for labels
+    const pick = {fk:'I', fd, root, conj, person, answer: group[person]};
+    return renderPrompt(pick);
+  }
+
+  // ── CURATED SET — original path ───────────────────────────────────────────
+  const selForm=document.getElementById('sel-form').value;
   const selIrreg=document.getElementById('sel-irreg').value;
 
   const formKeys=selForm==='all'?Object.keys(DATA):(DATA[selForm]?[selForm]:Object.keys(DATA));
@@ -786,7 +909,13 @@ function generatePrompt(){
   }
 
   const pick=candidates[Math.floor(Math.random()*candidates.length)];
-  const meaningStr=pick.person==='_'?pick.root.m:pick.root.m+(MEANING_SFXS[pick.conj]||'');
+  return renderPrompt(pick);
+}
+
+// Shared render path (split out so the expanded set can reuse it).
+function renderPrompt(pick){
+  const baseM = pick.root.m || '—';
+  const meaningStr=(!pick.root.m)?'—':(pick.person==='_'?baseM:baseM+(MEANING_SFXS[pick.conj]||''));
   const personLabel=pick.person==='_'?'':` · ${PERSON_LABELS[pick.person]}`;
 
   document.getElementById('cell-root').textContent=pick.root.r.split('-').join(' - ');
@@ -1215,6 +1344,29 @@ document.getElementById('btn-sarf-toggle').addEventListener('click', () => {
   panel.classList.toggle('open');
   btn.classList.toggle('open');
 });
+
+// ── VERB SET TOGGLE ───────────────────────────────────────────────────────────
+(function(){
+  const sel = document.getElementById('sel-verbset');
+  const selForm = document.getElementById('sel-form');
+  const selIrreg = document.getElementById('sel-irreg');
+  const selConj = document.getElementById('sel-conj');
+  function apply(){
+    const expanded = sel.value === 'expanded';
+    selForm.disabled = expanded;
+    selIrreg.disabled = expanded;
+    if(expanded){
+      selForm.value = 'I';
+      selIrreg.value = 'all';
+      // Nudge masdar off if selected (can't be generated for Form I)
+      if(selConj.value === 'masdar') selConj.value = 'all';
+      // Kick off the dataset load in the background
+      loadExpandedVerbs();
+    }
+  }
+  sel.addEventListener('change', apply);
+  apply();
+})();
 
 // ── BUTTONS & KEYS ────────────────────────────────────────────────────────────
 document.getElementById('btn-gen').addEventListener('click',()=>{startTimer();generatePrompt();});
