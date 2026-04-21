@@ -879,6 +879,77 @@ select:focus {
 
 .sarf-table tr:last-child td { border-bottom: none; }
 
+/* ── Paradigm tables (full conjugation grid) ────────────────── */
+.paradigm-tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.paradigm-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.paradigm-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-align: center;
+  padding-bottom: 0.15rem;
+}
+
+.paradigm-title-ar {
+  font-family: 'Amiri', serif;
+  font-size: 0.95rem;
+  color: var(--gold-dim);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-right: 0.15rem;
+}
+
+.paradigm-table {
+  direction: rtl;
+}
+
+.paradigm-table th {
+  font-family: 'Amiri', serif;
+  font-size: 0.85rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--gold-dim);
+  padding: 0.5rem 0.4rem;
+}
+
+.paradigm-table td {
+  font-size: 1.15rem;
+  padding: 0.55rem 0.5rem;
+  line-height: 1.7;
+}
+
+.paradigm-table td.arabic-label {
+  font-size: 0.9rem;
+  color: var(--gold-dim);
+  text-align: center;
+  padding: 0.55rem 0.5rem;
+  white-space: nowrap;
+  background: var(--surface3);
+  border-left: 1px solid var(--border);
+  width: auto;
+}
+
+.paradigm-empty {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 1rem;
+}
+
 .sarf-table td.label-cell {
   font-family: 'DM Mono', monospace;
   font-size: 0.65rem;
@@ -1012,6 +1083,20 @@ select:focus {
   .sarf-table td.arabic-label {
     font-size: 1rem;
     padding-right: 0.5rem;
+  }
+
+  .paradigm-tables {
+    grid-template-columns: 1fr;
+  }
+
+  .paradigm-table td {
+    font-size: 1.05rem;
+    padding: 0.45rem 0.3rem;
+  }
+
+  .paradigm-table th {
+    font-size: 0.78rem;
+    padding: 0.4rem 0.3rem;
   }
 
   .prompt-grid {

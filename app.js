@@ -981,61 +981,180 @@ document.getElementById('btn-reset-timer').addEventListener('click',()=>{
   }
 });
 
-// ── SARF SAGHIR ───────────────────────────────────────────────────────────────
-const PRONOUN_ORDER_PAST = [
-  {key:'he',ar:'هُوَ',en:'He'},
-  {key:'she',ar:'هِيَ',en:'She'},
-  {key:'you',ar:'أَنْتَ',en:'You (m)'},
-  {key:'I',ar:'أَنَا',en:'I'},
-  {key:'they',ar:'هُمْ',en:'They (m)'},
-];
-const PRONOUN_ORDER_PRESENT = PRONOUN_ORDER_PAST;
-const PRONOUN_ORDER_IMP = [
-  {key:'you',ar:'أَنْتَ',en:'You (m)'},
-  {key:'youpl',ar:'أَنْتُمْ',en:'You all (m)'},
-];
+// ── SARF SAGHIR — FULL PARADIGM TABLES ────────────────────────────────────────
+const _DAMMA = '\u064F', _FATHA = '\u064E', _KASRA = '\u0650',
+      _SUKUN = '\u0652', _SHADDA = '\u0651';
 
-function buildPronounTable(conj, forms, root) {
-  const table = document.getElementById('sarf-pronoun-table');
-  table.innerHTML = '';
-  let order, group;
+// Strip trailing diacritic if present
+function stripTrailHaraka(s) {
+  if (!s) return s;
+  const last = s.slice(-1);
+  if ([_DAMMA, _FATHA, _KASRA, _SUKUN].includes(last)) return s.slice(0, -1);
+  return s;
+}
 
-  if (conj === 'past') {
-    order = PRONOUN_ORDER_PAST; group = forms.past;
-  } else if (conj === 'present') {
-    order = PRONOUN_ORDER_PRESENT; group = forms.present;
-  } else if (conj === 'imperative') {
-    order = PRONOUN_ORDER_IMP; group = forms.imperative;
+// Strip trailing sukun if present
+function stripTrailSukun(s) {
+  if (!s) return s;
+  if (s.slice(-1) === _SUKUN) return s.slice(0, -1);
+  return s;
+}
+
+// Past tense subject stem: e.g., كَتَبْتَ → كَتَبْ,  قُلْتَ → قُلْ
+function pastSubjectStem(youForm) {
+  if (!youForm) return null;
+  let s = youForm;
+  // strip trailing fatha
+  if (s.slice(-1) === _FATHA) s = s.slice(0, -1);
+  // strip trailing ت
+  if (s.slice(-1) === 'ت') s = s.slice(0, -1);
+  return s;
+}
+
+// Imperative long stem from youpl: اُكْتُبُوا → اُكْتُب, قُولُوا → قُول
+function imperativeLongStem(youplForm) {
+  if (!youplForm) return null;
+  let s = youplForm;
+  if (s.slice(-1) === 'ا') s = s.slice(0, -1);
+  if (s.slice(-1) === 'و') s = s.slice(0, -1);
+  if (s.slice(-1) === _DAMMA) s = s.slice(0, -1);
+  return s;
+}
+
+// Derive full past paradigm — 14 persons
+function deriveFullPast(forms) {
+  const p = forms && forms.past;
+  if (!p || !p.he || !p.you) return null;
+  const stem = pastSubjectStem(p.you);
+  // 3f_s → she; 3f_dual: strip trailing sukun, add fatha+alif
+  const sheDual = (function(){
+    let s = p.she || '';
+    if (s.slice(-1) === _SUKUN) s = s.slice(0, -1);
+    return s + _FATHA + 'ا';
+  })();
+  const heDual = (p.he || '') + 'ا';
+  return {
+    '3m_s': p.he,
+    '3f_s': p.she || null,
+    '2m_s': p.you,
+    '2f_s': stem + 'ت' + _KASRA,
+    '1c_s': p.I || null,
+    '3m_d': heDual,
+    '3f_d': sheDual,
+    '2c_d': stem + 'ت' + _DAMMA + 'م' + _FATHA + 'ا',
+    '3m_p': p.they || null,
+    '3f_p': stem + 'ن' + _FATHA,
+    '2m_p': stem + 'ت' + _DAMMA + 'م' + _SUKUN,
+    '2f_p': stem + 'ت' + _DAMMA + 'ن' + _SHADDA + _FATHA,
+    '1c_p': stem + 'ن' + _FATHA + 'ا',
+  };
+}
+
+// Derive full present paradigm — 13 persons (marfu' state)
+function deriveFullPresent(forms, root) {
+  const p = forms && forms.present;
+  if (!p || !p.he || !p.you) return null;
+  const heStem = stripTrailHaraka(p.he);
+  const sheStem = stripTrailHaraka(p.she || '');
+  const youStem = stripTrailHaraka(p.you);
+  // 1pl: replace leading ي of `he` with ن
+  const we = 'ن' + p.he.slice(1);
+
+  // For 3fpl / 2fpl: use the jussive short stem when available (hollow/mudaaf).
+  // jussive (مجزوم هو) e.g., يَقُلْ → short stem = يَقُل
+  let threefpl, twofpl;
+  if (root && root.jPres) {
+    const jBase = stripTrailSukun(root.jPres);
+    threefpl = jBase + _SUKUN + 'ن' + _FATHA;
+    twofpl = 'ت' + jBase.slice(1) + _SUKUN + 'ن' + _FATHA;
   } else {
-    // masdar / activepart / passivepart — single form, show simple
-    const val = forms[conj] && forms[conj]._;
-    if (val) {
-      table.innerHTML = `<tr><th>Form</th></tr><tr><td>${val}</td></tr>`;
-    }
-    return;
+    threefpl = heStem + _SUKUN + 'ن' + _FATHA;
+    twofpl = youStem + _SUKUN + 'ن' + _FATHA;
   }
 
-  if (!group) return;
+  return {
+    '3m_s': p.he,
+    '3f_s': p.she || null,
+    '2m_s': p.you,
+    '2f_s': youStem + _KASRA + 'ي' + 'ن' + _FATHA,
+    '1c_s': p.I || null,
+    '3m_d': heStem + _FATHA + 'ا' + 'ن' + _KASRA,
+    '3f_d': sheStem + _FATHA + 'ا' + 'ن' + _KASRA,
+    '2c_d': youStem + _FATHA + 'ا' + 'ن' + _KASRA,
+    '3m_p': p.they || null,
+    '3f_p': threefpl,
+    '2m_p': youStem + _DAMMA + 'و' + 'ن' + _FATHA,
+    '2f_p': twofpl,
+    '1c_p': we,
+  };
+}
 
-  // For present tense, show all three i'rab columns
-  if (conj === 'present') {
-    let html = '<tr><th></th><th>مَرْفُوع</th><th>مَنْصُوب</th><th>مَجْزُوم</th></tr>';
-    for (const p of order) {
-      const marf = group[p.key];
-      if (!marf) continue;
-      const iraab = derivePersonIraab(marf, p.key === 'he' ? (root.jPres || null) : null);
-      html += `<tr><td class="arabic-label">${p.ar}</td><td>${iraab.r}</td><td>${iraab.n}</td><td>${iraab.j}</td></tr>`;
+// Derive full imperative paradigm — 5 persons (2msg..2fpl, no 1st/3rd)
+function deriveFullImperative(forms) {
+  const imp = forms && forms.imperative;
+  if (!imp || !imp.you) return null;
+  const longStem = imperativeLongStem(imp.youpl) || stripTrailSukun(imp.you);
+  const shortStem = stripTrailSukun(imp.you);
+  return {
+    '2m_s': imp.you,
+    '2f_s': longStem + _KASRA + 'ي',
+    '2c_d': longStem + _FATHA + 'ا',
+    '2m_p': imp.youpl || (longStem + _DAMMA + 'و' + 'ا'),
+    '2f_p': shortStem + _SUKUN + 'ن' + _FATHA,
+  };
+}
+
+// Row definitions: [label-ar, keys in singular/dual/plural order]
+const PARADIGM_ROWS_FULL = [
+  {ar: 'الغَائِب',  keys: ['3m_s', '3m_d', '3m_p']},
+  {ar: 'الغَائِبَة', keys: ['3f_s', '3f_d', '3f_p']},
+  {ar: 'المُخَاطَب', keys: ['2m_s', '2c_d', '2m_p']},
+  {ar: 'المُخَاطَبَة', keys: ['2f_s', '2c_d', '2f_p']},
+  {ar: 'المُتَكَلِّم', keys: ['1c_s', null,   '1c_p']},
+];
+const PARADIGM_ROWS_IMP = [
+  {ar: 'المُخَاطَب', keys: ['2m_s', '2c_d', '2m_p']},
+  {ar: 'المُخَاطَبَة', keys: ['2f_s', '2c_d', '2f_p']},
+];
+
+function renderParadigmTable(title, titleAr, paradigm, rows) {
+  if (!paradigm) return '';
+  // Column order in RTL: rightmost = row-label, then مفرد, مثنى, جمع (source-order)
+  let html = `<div class="paradigm-block">
+    <div class="paradigm-title">${title} <span class="paradigm-title-ar">— ${titleAr}</span></div>
+    <table class="sarf-table paradigm-table">
+      <tr>
+        <th></th>
+        <th>المُفْرَد</th>
+        <th>المُثَنَّى</th>
+        <th>الجَمْع</th>
+      </tr>`;
+  for (const row of rows) {
+    html += `<tr><td class="arabic-label">${row.ar}</td>`;
+    // row.keys = [singular, dual, plural]
+    for (let i = 0; i < 3; i++) {
+      const k = row.keys[i];
+      const val = k ? paradigm[k] : null;
+      // Merged dual for المتكلم? We show "—" if null, OR merge عنوان if you prefer
+      html += `<td>${val || '—'}</td>`;
     }
-    table.innerHTML = html;
-  } else {
-    let html = '<tr><th></th><th>Form</th></tr>';
-    for (const p of order) {
-      const val = group[p.key];
-      if (!val) continue;
-      html += `<tr><td class="arabic-label">${p.ar}</td><td>${val}</td></tr>`;
-    }
-    table.innerHTML = html;
+    html += '</tr>';
   }
+  html += '</table></div>';
+  return html;
+}
+
+function buildParadigmTables(forms, root) {
+  const wrap = document.getElementById('sarf-paradigm-tables');
+  if (!wrap) return;
+  const past = deriveFullPast(forms);
+  const pres = deriveFullPresent(forms, root);
+  const imp  = deriveFullImperative(forms);
+  let html = '';
+  if (past) html += renderParadigmTable('Past', 'المَاضِي', past, PARADIGM_ROWS_FULL);
+  if (pres) html += renderParadigmTable('Present', 'المُضَارِع', pres, PARADIGM_ROWS_FULL);
+  if (imp)  html += renderParadigmTable('Imperative', 'الأَمْر', imp, PARADIGM_ROWS_IMP);
+  wrap.innerHTML = html || '<div class="paradigm-empty">No paradigm available.</div>';
 }
 
 function buildSarfOverview(root, fd) {
@@ -1078,7 +1197,7 @@ function showSarfSaghir() {
   btn.classList.remove('open');
   // Populate tables
   const pick = state.currentRoot;
-  buildPronounTable(pick.conj, pick.root.forms, pick.root);
+  buildParadigmTables(pick.root.forms, pick.root);
   buildSarfOverview(pick.root, pick.fd);
 }
 
